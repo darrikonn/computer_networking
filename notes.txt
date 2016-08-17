@@ -1,0 +1,6 @@
+- Most all of the protocols are used with request for comments (RFC), which is an internet standard.
+- The internet is an interface that allows devices to send and receive data.
+- Bandwidth: how many bits per second can be transmitted over the link
+- ADSL if it uses different down-/upstream
+- Modem is used to talk to the ISP (Internet Service Provider)
+
