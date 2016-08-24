@@ -3,4 +3,7 @@
 - Bandwidth: how many bits per second can be transmitted over the link
 - ADSL if it uses different down-/upstream
 - Modem is used to talk to the ISP (Internet Service Provider)
-
+- 35 users, how likely is it that all of them are active at the same time: 0.1^35
+  35 * 0.1^34 * 0.9 that one is inactive
+  choose two users: 34 * 35 * 0.1^33 * 0.9^2
+ 
