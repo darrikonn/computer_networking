@@ -10,5 +10,9 @@ The IP protocol specifies the format of the packets that are sent and received a
 **Internet standards** are developed by Internet Engineering Task Force (IETF). The IETF standards documents are called **requests for comments (RCFs)**. They define protocols such as TCP, IP, HTTP and SMTP.
 
 ### A Services Description
-**Distributed application** involve multiple end systems that exchange data with each other. Internet applications run on end systems - they do not run in the packet switches in the network core.
+**Distributed application** involve multiple end systems that exchange data with each other. Internet applications run on end systems - they do not run in the packet switches in the network core. <br />
+End systems attached to the Internet provide an **Application Programming Interface (API)** that specifies how a program running on one end system asks the Internet infrastructure to deliver data to a specific destination program running on another end system. This Internet API is a set of rules that the sending program must follow so that the Internet can deliver the data to the destination program.
+
+### What Is a Protocol
+
 
