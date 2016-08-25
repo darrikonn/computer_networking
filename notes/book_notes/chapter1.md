@@ -1,4 +1,4 @@
-# Book Notes
+# Chapter 1
 
 ## What is the Internet?
 The Internet is a computer network that interconnects hundreds of millions of computing devices throughout the world. All of these devices are called **hosts** or **end systems**. <br />
@@ -37,8 +37,19 @@ When the downstream and upstream rates are different, the access is said to be a
 One important characteristic of cable Internet access is that it is a shared broadcast medium. Every packet sent by the head end travels downstream on every link to every home and every packet sent by a home travels on the upstream channel to the head end. For this reason, if several users are simultaneously downloading a video file on the downstream channel, the actual rate at which each user receives its video file will be significantly lower than the aggregate cable downstream rate.<br/>
 **Fiber To The Home (FTTH)** can potentially provide Internet access rates in the gigabits per second range.<br />
 
-On corporate and university campuses, and increasingly in home settings, a local area network (LAN) is used to connect an end system to the edge router. Ethernet is by far the most prevalent access technology in corporate, university and home networks.
+On corporate and university campuses, and increasingly in home settings, a local area network (LAN) is used to connect an end system to the edge router. Ethernet is by far the most prevalent access technology in corporate, university and home networks. <br />
+In a wireless LAN setting, wireless users transmit/receive packets to/from an access point that is connected into the enterprise's network, which in turn is connected to the wired Internet.<br />
+Telecommunications companies have made enormous investments in so-called third-generation (3G) wireless, which provides packet-switched wide-area wireless Internet access at speeds in excess of 1 Mbps. Mobile access networks use the radio spectrum.
 
+#### Physical Media
+When bit travels from one end system to another, it's transmitted many, many times (the router transmits the bit and sends it and another receives and transmits etc.). For each transmitter-receiver pair, the bit is sent by propagating electromagnetic waves or optical pulses across a **physical medium**. Examples are twisted-pair copper wire, coaxial cable, multimode fiber-optic cable, terrestrial radio spectrum etc. Physical media fall into two categories: **guided media** and **unguided media**. With guided media, the waves are guided along a solid medium, such as a fiber-optic cable or a coaxial cable. With unguided media, the waves propagate in the atmosphere and in outer space, such as in a wireless LAN or a digital satellite channel.<br />
+
+## The Network Core
+### Packet Switching
+In a network application, end systems exchange **messages** with each other. These messages can contain anything. To send a message from a source end system to a destination end system, the source breaks long messages into smaller chunks of data known as **packets**. Between source and destination, each packet travels through communication links and **packet switches** (**routers** and **link-layer switches**). Packets are transmitted over each communication link at a rate equal to the full transmission rate of the link. So, if a source end system or a packet switch is sending a packet of L bits over a link with transmission rate R bits/sec, then the time to transmit the packet is L/R seconds.<br />
+Most packet switches use **store-and-forward transmission** at the input to the links. This means that the packet switch must receive the entire packet before it can begin to transmit the first bit of the packet onto the outbound link. The end-to-end delay is (N links and N-1 routers between source and destination): <br/>
+> d_end-to-end = N * (L/R)
+Each packet switch has multiple links attached to it. For each attached link, the packet switch has an **output buffer**, which stores packets that the router is about to send into that link. If an arriving packet needs to be transmitted onto a link but finds the link busy with the transmission of another packet, the arricing packet must wait in the output buffer. Thus, in addition to the store-and-forward delays, packets suffer output buffer **queueing delays**. When an arriving packet may find that the buffer is completely full with other packets waigin for transmission, a **packet loss** will occur - either the arricing packet or one of the already-queued will be dropped. <br />
 
 
 
