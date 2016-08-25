@@ -14,5 +14,15 @@ The IP protocol specifies the format of the packets that are sent and received a
 End systems attached to the Internet provide an **Application Programming Interface (API)** that specifies how a program running on one end system asks the Internet infrastructure to deliver data to a specific destination program running on another end system. This Internet API is a set of rules that the sending program must follow so that the Internet can deliver the data to the destination program.
 
 ### What Is a Protocol
+It takes two (or more) communcating entities running the same protocol in order to accomplish a task. <br />
+TCP Connection request ---> <br />
+<--- TCP Connection reply <br />
+GET http://www.awl.com/kurose-ross ---> <br />
+<--- <file> <br />
 
+#### Network Protocols
+All activity in the Internet that involves two or more communicating remote entities (computer, smartphone, tablet, router etc.) is governed by a protocol.
+Hardware-implemented protocols in two physically connected computers control the flow of bits on the "wire" between the two network interface cards; congestion-control protocols in end systems control the rate at which packets are transmitted between sender and receiver; protocols in routers determine a packet's path from source to destination. <br />
+
+## The Network Edge
 
