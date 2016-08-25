@@ -51,6 +51,9 @@ Most packet switches use **store-and-forward transmission** at the input to the 
 > d_end-to-end = N * (L/R)
 
 Each packet switch has multiple links attached to it. For each attached link, the packet switch has an **output buffer**, which stores packets that the router is about to send into that link. If an arriving packet needs to be transmitted onto a link but finds the link busy with the transmission of another packet, the arricing packet must wait in the output buffer. Thus, in addition to the store-and-forward delays, packets suffer output buffer **queueing delays**. When an arriving packet may find that the buffer is completely full with other packets waigin for transmission, a **packet loss** will occur - either the arricing packet or one of the already-queued will be dropped. <br />
+In the Internet, every end system has an address called an IP address. When a source end system wants to send a packet to a destination end system, the source includes the destination's IP address in the packet's header. When a packet arrives at a router in the network, the router examines a portion of the packet's destination address and forwards the packet to an adjacent router. Each router has a **forwarding table** that maps destination addresses to that router's outbound links. When a packet arrives at a router, the router examines the address and searches its forwarding table, using this destination address to find the appropriate outbound link. The router then directs the packet to this outbound link. The Internet has a number of special **routing protocols** that are used to automatically set the forwarding tables.
+
+### Circuit Switching
 
 
 
