@@ -54,8 +54,14 @@ Each packet switch has multiple links attached to it. For each attached link, th
 In the Internet, every end system has an address called an IP address. When a source end system wants to send a packet to a destination end system, the source includes the destination's IP address in the packet's header. When a packet arrives at a router in the network, the router examines a portion of the packet's destination address and forwards the packet to an adjacent router. Each router has a **forwarding table** that maps destination addresses to that router's outbound links. When a packet arrives at a router, the router examines the address and searches its forwarding table, using this destination address to find the appropriate outbound link. The router then directs the packet to this outbound link. The Internet has a number of special **routing protocols** that are used to automatically set the forwarding tables.
 
 ### Circuit Switching
+There are two fundamental approaches to moving data through a network of links and switches: **circuit switching** and **packet switching**. In circuit-switched networks, the resources needed along a path (buffers, link transmission rate) to provide for communication between the end systems are reserved for the duration of the communication session between the end systems. In packet-switched networks, these resources are not reserved, a session's messages use the resources on demand, and as a consequence, may have to wait for access to a communication link. Traditional telephone networks are examples of circuit-switched networks. The connection that is established between sender and receiver is called **circuit**. <br />
+When two hosts want to communicate, the network establishes a dedicated **end-to-end connection** between the hosts. Thus in order for Host A to communicate with Host B, the network must first reserve one circuit on each of two links. <br />
+A circuit in a link is implemented with either **frequency-division multiplexing (FDM)** or **time-division multiplexing (TDM)**. <br /> With FDM, the frequency spectrum of a link is divided up among the connections established across the link. The link dedicates a frequency band to each connection for the duration of the connection. The width of the band is called **bandwidth**. <br /> 
+For a TDM link, time is divided into frames of fixed duration, and each frame is divided into a fixed number of time slots. When the network establishes a connection across a link, the network dedicates one time slot in every frame to this connection.
 
-
+### Network of Networks
+ISPs themselves must be interconnected. This is done by creating a *network of networks* <br />
+(kominn ad over the years...).
 
 
 
