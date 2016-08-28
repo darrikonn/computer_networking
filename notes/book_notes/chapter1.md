@@ -82,7 +82,27 @@ Propagation delay = distance length <br />
 ### Queuing Delays and Packet Loss
 R is the transmission rate and the average rate at which bits arrive at the queue is La bits/sec. The **traffic intensity** is then La/R. If La/R > 1, then the average rate at which bits arrive at the queue exceeds the rate at which the bits can be transmitted from the queue. When La/R <= 1; suppose N packets arrive simultaneously every (L/R)N seconds. Then the first packet transmitted has no queuing delay; the second packet transmitted has a queuing delay of L/R seconds; and more generally the nth packet has (n-1)L/R seconds delay.<br/>
 If a packet arrives to a full queue, the packet will be **dropped**.
-42
+
+### End-to-End Delay
+Given N-1 routers, processing delay is d_proc, transmission delay is L/R, where L is the packet size, and the propagation on each link is d_prop; then the end-to-end delay is: 
+> d_end-end = N(d_proc + d_trans + d_prop)
+
+### Throughput in Computer Networks
+In addition to delay and packet loss, another critical performance measure in computerr networks is end-to-end throughput. The **instantaneous throughput** at any instant of time is the rate (int bits/sec) at which Host B is receiving the file. If the file consists of F bits and the transfer takes T seconds for Host B to receive all F bits, then the **average throughput** of the file transfer is F/T bits/sec. <br />
+The throughput is min{R_c, R_s}, i.e. it is the transmission rate of the **bottleneck link**. The time it takes to transfer a large file of F bits from server to client is F/min{R_s, R_c}.
+
+## Protocol Layers and Their Service Models
+To provide structure to the design of network protocols, network designers organize protocols - and the network hardware and software that implement the procols - in **layers**. Each protocol belongs to one of the layers. A layer offers **services** (**service model** of a layer). The services provided by layer n may include reliable delivery of messages from one edge of the network to the other. <br />
+A protocol layer can be implemented in software, in hardware, or in a combination of the two. Application-layer protocols - such as HTTP and SMTP - are almost always implemented in software in the end systems; so are transport-layer protocols. Because the physical layer and data link layers are responsible for handling communication over a specific link, they are typically implemented in a network interface card (Ethernet or WiFi interface cards) associated with a given link. The network layer is often a mixed implementation of hardware and software. <br />
+Layering provides a structured way to discuss system components. <br />
+The protocols of the various layers are called the **protocol stack**. The Internet protocol stack consists of five layers: the physical, link, network, transport, and application layers. <br />
+The **application layer** is where network applications and their application-layer protocol reside. It includes many protocols, such as the HTTP protocol, SMTP, and FTP. An application-layer protocol is distributed over multiple end systems, with the application in one end system using the protocol to exchange packets of information with the application in another end system. We'll refer to this packet of information at the application layer as a **message**. <br />
+The Internet's **transport layer** transports application-layer messages between application endpoints. In the Internet there are two transport protocols, TCP and UDP, either of which can transport application-layer messages. TCP provides a connection-oriented service to its applications. This service includes guaranteed delivery of application-layer messages to the destination and flow control (sender/receiver speed matching). TCP also breaks long messages into shorter segments and provides a congestion-control mechanism, so that a source throttles its transmission rate when the network is congested. The UDP protocol provides a connectionless service to its application. It provides no reliability, no flow control, and no congestion control. The transport-layer packet is referred as a **segment**. <br />
+The Internet's **network layer** is responsible for moving network-layer packets known as **datagrams** from one host to another. The transport-layer protocol in a source host passes a transport-layer segmend and a destination address to the network layer. The network layer then provides the service of delivering the segment to the transport layer in the destination host. The network layer includes the IP Protocol, which defines the fields in the datagram as well as how the end systems and routers act on these fields. Only one IP protocol and all Internet components that have a network layer must run the IP protocol. The Internet's network layer also contains routing protocols that determine the routes that datagrams take between sources and destinations. Although the network layer contains both the IP protocol and numerous routing protocols, it is often simply referred to as the IP layer. <br />
+The network layer routes a datagram through a series of routers between the source and destination. To move a packet from one node to the next in the route, the network layer relies on the services of the **link layer**. When datagram is delivered to the next node, the link layer passes the datagram up to the network layer. The link-layer packets is referred to as **frames**. <br />
+While the job of the link layer is to move entire frames from one network element to an adjacent network element, the job of the **physical layer** is to move the *individual bits* within the frame from one node to the next.<br />
+
+## Network Under Attack
 
 
 
