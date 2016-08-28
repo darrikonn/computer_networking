@@ -103,8 +103,12 @@ The network layer routes a datagram through a series of routers between the sour
 While the job of the link layer is to move entire frames from one network element to an adjacent network element, the job of the **physical layer** is to move the *individual bits* within the frame from one node to the next.<br />
 
 ## Network Under Attack
-
-
-
-
-
+Once **malware** infects our device it can do all kinds of devious things, including deleting our files; installing spyware and more. Our compromised host may also be enrolled in a network of thousands of similarly compromised devices, collectively known as a **botnet**, which leverages for spam e-mail distribution or DOS attacks. <br/>
+Much of the malware out there today is **self-replicating**: once it infects one host, from that host it seeks entry into yet more hosts. **Viruses** are malware that require some form of user interaction to infect the user's device. **Worms** are malware that can enter a device without any explicit user interaction.<br/>
+**Denial-of-Service (DOS) attacks** can be: <br/>
+* *Vulnerability attack*. This involves sending a few well-crafted messages to a vulnerable application or operating system running on a targeted host. If the right sequence of packets is sent to a vulnerable application or operating system, the service can stop or, the host can crash.
+* *Bandwidth flooding*. The attacker sends a deluge of packets to the targeted host - so many packets that the target's access link becomes clogged, preventing legitimate packets from reaching the server.
+* *Connection flooding*. The attacker establishes a large number of half-open or fully open TCP connections at the target host. The host can become so bogged down with these bogus connections that it stops accepting legitimate connections.
+<br/>
+A passive receiver that records a copy of every packet that flies by is called a **packet sniffer**.<br/>
+The ability to inject packets into the Internet with a false source address is known as **IP spoofing**, and is but one of many ways in which one user can masquerade as another user.
