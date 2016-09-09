@@ -3,3 +3,5 @@
 +----+-----+--------+
 | op | blk |  DATA  |
 +____+_____+________+
+
+tftp 127.0.0.1 2000 -m binary -c get example_data3
