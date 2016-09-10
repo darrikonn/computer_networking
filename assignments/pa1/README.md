@@ -25,3 +25,34 @@ The following commands fetch the files from the data directory that is located o
 > tftp 127.0.0.1 2000 -c get example_data1
   tftp 127.0.0.1 2000 -c get example_data2
   tftp 127.0.0.1 2000 -m binary -c get example_data3
+
+## Packets
+##### RRQ/WRQ packet
+ 2 bytes     char\*   byte  char\*  byte<br/>
++--------+----------+------+------+-----+<br/>
+| OpCode | Filename |   0  | Mode |  0  |<br/>
++--------+----------+------+------+-----+<br/>
+
+##### DATA packet
+ 2 bytes   2 bytes  n bytes<br/>
++--------+---------+--------+<br/>
+| OpCode | Block # |  Data  |<br/>
++--------+---------+--------+<br/>
+
+##### ACK packet
+ 2 bytes   2 bytes<br/>
++--------+---------+<br/>
+| OpCode | Block # |<br/>
++--------+---------+<br/>
+
+##### Data packet
+ 2 bytes   2 bytes  n bytes<br/>
++--------+---------+--------+<br/>
+| OpCode | Block # |  Data  |<br/>
++--------+---------+--------+<br/>
+
+##### ERROR packet
+ 2 bytes   2 bytes   char\*  byte<br/>
++--------+---------+--------+-----+<br/>
+| OpCode | ErrCode | ErrMsg |  0  |<br/>
++--------+---------+--------+-----+<br/>

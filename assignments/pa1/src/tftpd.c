@@ -159,10 +159,10 @@ void setMode(char* pkt, int fileNameLength, char* mode) {
 }
 
 /****** Data ******
- *  2 bytes   2 bytes   char*
- * +--------+---------+------+
- * | OpCode | Block # | Data |
- * +--------+---------+------+
+ *  2 bytes   2 bytes  n bytes
+ * +--------+---------+--------+
+ * | OpCode | Block # |  Data  |
+ * +--------+---------+--------+
  */
 
 /*
@@ -281,6 +281,7 @@ int main(int argc, char *argv[]) {
 
                 // compose a new packet to send the requested file
                 setOperationCode(packetComposed, 3); // data
+                // block numbers are consecutive and begin with one
                 setBlockNumber(packetComposed, 1);
                 data_size = setData(packetComposed, fp);
                 // increment the block number
@@ -325,12 +326,8 @@ int main(int argc, char *argv[]) {
                     setOperationCode(packetComposed, 3); // data
                     setBlockNumber(packetComposed, nextBlockNumber);
                     data_size = setData(packetComposed, fp);
-                    // increment the block number
-                    if (!(nextBlockNumber % USHRT_MAX)) {
-                        nextBlockNumber = 1;
-                    } else {
-                        nextBlockNumber++;
-                    }
+                    // increment the block number with regards to overflow of unsigned short
+                    nextBlockNumber = (nextBlockNumber+1) % USHRT_MAX;
 
                     sendto(sockfd, packetComposed, data_size, 0, 
                             (struct sockaddr*) &client, len);
@@ -343,6 +340,13 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 5: // Error (ERROR)
+                // do not retransmit (the TFTP server may terminate)
+                break;
+            default: // Unknown operation code
+                setOperationCode(packetComposed, 5); // error
+                setErrorCodeAndMessage(packetComposed, 4); // illegal operation
+                sendto(sockfd, packetComposed, PACKET_SIZE, 0,
+                        (struct sockaddr*) &client, len);
                 break;
         }
     }
