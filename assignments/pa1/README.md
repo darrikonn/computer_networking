@@ -22,8 +22,8 @@ To download a file from the client tftp, make sure you have tftp client installe
 > tftp <ip_address> <port> -c get <requested_file>
 
 The following commands fetch the files from the data directory that is located on the server side:
-> tftp 127.0.0.1 2000 -c get example_data1
-  tftp 127.0.0.1 2000 -c get example_data2
+> tftp 127.0.0.1 2000 -c get example_data1<br/>
+  tftp 127.0.0.1 2000 -c get example_data2<br/>
   tftp 127.0.0.1 2000 -m binary -c get example_data3
 
 ## Packets
