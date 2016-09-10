@@ -66,10 +66,10 @@ short validateFileViolation(char* fileName) {
 }
 
 /****** Error code and error message ******
- *  2 bytes    2 bytes     char*
- * +--------+-----------+----------+
- * | OpCode | ErrorCode | ErrorMsg |
- * +--------+-----------+----------+
+ *  2 bytes    2 bytes     char*    1 byte
+ * +--------+-----------+----------+------+
+ * | OpCode | ErrorCode | ErrorMsg |   0  |
+ * +--------+-----------+----------+------+
  */
 
 /*
@@ -108,6 +108,9 @@ void setErrorCodeAndMessage(char* pkt, short errCode) {
             strcpy(pkt+4, "No such use.");
             break;
     }
+
+    // insert the last 0 byte to the packet
+    pkt[PACKET_SIZE-1] = '\0';
 }
 
 /****** Block number ******
@@ -188,8 +191,8 @@ int main(int argc, char *argv[]) {
 
     // open directory
     struct dirent *dir_instance;
-    char dir_name[100];
-    memcpy(dir_name, argv[2], 100); // use memcpy when we know the size (faster)
+    char dir_name[20];
+    memcpy(dir_name, argv[2], 20); // use memcpy when we know the size (faster)
     DIR* directory = opendir(dir_name);
     if (directory == NULL) {
         fprintf(stderr, "Could not open directory! Check directory path.\n");
@@ -258,7 +261,8 @@ int main(int argc, char *argv[]) {
                 setMode(packetReceived, strlen(fileName), mode);
                 
                 // construct the file location
-                char* fileLocation = dir_name;
+                char fileLocation[100];
+                strcpy(fileLocation, dir_name);
                 if (dir_name[strlen(dir_name)-1] != '/') {
                     strcat(fileLocation, "/");
                 }
@@ -300,7 +304,10 @@ int main(int argc, char *argv[]) {
             case 4: // Acknowledgment (ACK)
                 // get the block number of the acknowledged packet
                 prevBlockNumber = getBlockNumber(packetReceived);
-                if (prevBlockNumber == nextBlockNumber - 2) {
+                if (prevBlockNumber == nextBlockNumber) {
+                    // acknowledging error packet being sent from server
+                    // do nothing
+                } else if (prevBlockNumber == nextBlockNumber - 2) {
                     // a packet loss, so try to send again
                     sendto(sockfd, packetComposed, data_size, 0, 
                             (struct sockaddr*) &client, len);
@@ -310,7 +317,10 @@ int main(int argc, char *argv[]) {
                     setErrorCodeAndMessage(packetComposed, 5); // unknown transfer ID
                     sendto(sockfd, packetComposed, PACKET_SIZE, 0,
                             (struct sockaddr*) &client, len);
-                    fclose(fp);
+                    if (fp != NULL) {
+                        fclose(fp);
+                    }
+                    fp = NULL;
                 } else if (data_size == PACKET_SIZE) { // messages yet to be sent
                     setOperationCode(packetComposed, 3); // data
                     setBlockNumber(packetComposed, nextBlockNumber);
@@ -326,7 +336,10 @@ int main(int argc, char *argv[]) {
                             (struct sockaddr*) &client, len);
                 } else {
                     // done reading, close the file
-                    fclose(fp);
+                    if (fp != NULL) {
+                        fclose(fp);
+                    }
+                    fp = NULL;
                 }
                 break;
             case 5: // Error (ERROR)
