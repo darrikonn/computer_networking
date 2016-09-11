@@ -30,7 +30,7 @@ short getOperationCode(char* msg);
 void setOperationCode(char* pkt, short opCode);
 char* getFileName(char* msg);
 short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH],
-                            char* fileName);
+                            char* fileName, size_t fileCnt);
 short validateFileViolation(char* fileName);
 void setErrorCodeAndMessage(char* pkt, short errCode);
 unsigned short getBlockNumber(char* pkt);

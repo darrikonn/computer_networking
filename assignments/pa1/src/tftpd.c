@@ -43,9 +43,8 @@ char* getFileName(char* msg) {
  * Validate that the file exists
  */
 short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH],
-                            char* fileName) {
-    int i;
-    for (i = 0; validFiles[i]; i++) {
+                            char* fileName, size_t fileCnt) {
+    for (size_t i = 0; i < fileCnt; i++) {
         if (strcmp(validFiles[i], fileName) == 0) {
             return 1;
         }
@@ -268,7 +267,7 @@ int main(int argc, char* argv[]) {
 
                 // validate that this file exists in the directory
                 // if file exists, then check that the file can be opened
-                if (!validateFileExistance(validFileNames, fileName) ||
+                if (!validateFileExistance(validFileNames, fileName, fileCnt) ||
                         (fp = fopen(fileLocation, mode)) == NULL) {
                     setOperationCode(packetComposed, 5); // error
                     setErrorCodeAndMessage(packetComposed, 1); // file not found
@@ -313,7 +312,7 @@ int main(int argc, char* argv[]) {
                 } else if (prevBlockNumber != nextBlockNumber - 1) {
                     // should not happen, so an error has occured
                     setOperationCode(packetComposed, 5); // error
-                    setErrorCodeAndMessage(packetComposed, 5); // unknown transfer ID
+                    setErrorCodeAndMessage(packetComposed, 0); // Not defined, see error message (if any).
                     sendto(sockfd, packetComposed, PACKET_SIZE, 0,
                            (struct sockaddr*) &client, len);
                     if (fp != NULL) {
