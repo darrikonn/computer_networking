@@ -338,7 +338,7 @@ int main(int argc, char* argv[]) {
                 }
                 break;
             case 5: // Error (ERROR)
-                // do not retransmit (the TFTP server may terminate)
+                // do nothing
                 break;
             default: // Unknown operation code
                 setOperationCode(packetComposed, 5); // error
