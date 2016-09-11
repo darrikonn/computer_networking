@@ -29,12 +29,12 @@ const size_t MAX_FILENAME_LENGTH = 30;
 short getOperationCode(char* msg);
 void setOperationCode(char* pkt, short opCode);
 char* getFileName(char* msg);
-short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH], 
-        char* fileName);
+short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH],
+                            char* fileName);
 short validateFileViolation(char* fileName);
 void setErrorCodeAndMessage(char* pkt, short errCode);
-unsigned short getBlockNumber(char* pkt); 
+unsigned short getBlockNumber(char* pkt);
 void setMode(char* pkt, int fileNameLength, char* mode);
-size_t setData(char* pkt, FILE* fp); 
+size_t setData(char* pkt, FILE* fp);
 
 #endif // TFTPD_H_

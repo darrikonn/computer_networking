@@ -9,7 +9,7 @@
 
 /*
  * Get the operation code of the package
- */ 
+ */
 short getOperationCode(char* pkt) {
     // returning the first two bytes representation of the packet
     return (pkt[0] << 8 | pkt[1]);
@@ -42,8 +42,8 @@ char* getFileName(char* msg) {
 /*
  * Validate that the file exists
  */
-short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH], 
-        char* fileName) {
+short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH],
+                            char* fileName) {
     int i;
     for (i = 0; validFiles[i]; i++) {
         if (strcmp(validFiles[i], fileName) == 0) {
@@ -119,7 +119,7 @@ void setErrorCodeAndMessage(char* pkt, short errCode) {
  * Get the block number from the packet as an unsigned short
  */
 unsigned short getBlockNumber(char* pkt) {
-    // get 2 byte representation as an unsigned short 
+    // get 2 byte representation as an unsigned short
     return (((pkt[2] << 8) & 0xff00) | (pkt[3] & 0xff));
 }
 
@@ -147,8 +147,7 @@ void setMode(char* pkt, int fileNameLength, char* mode) {
     char* modeType = pkt+3+fileNameLength;
     if (!strcmp(modeType, "octet")) {
         strcpy(mode, "rb");
-    }
-    else {
+    } else {
         strcpy(mode, "r");
     }
 }
@@ -169,7 +168,7 @@ size_t setData(char* pkt, FILE* fp) {
     return fread(pkt+4, 1, 512, fp)+4;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     // validate and parse parameters
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <port> <directory>\n", argv[0]);
@@ -185,7 +184,7 @@ int main(int argc, char *argv[]) {
     }
 
     // open directory
-    struct dirent *dir_instance;
+    struct dirent* dir_instance;
     char dir_name[20];
     memcpy(dir_name, argv[2], 20); // use memcpy when we know the size (faster)
     DIR* directory = opendir(dir_name);
@@ -194,7 +193,7 @@ int main(int argc, char *argv[]) {
         exit(-1);
     }
 
-    // by opening the directory, I can secure that the client can't ask for data in 
+    // by opening the directory, I can secure that the client can't ask for data in
     // parent directories; e.g. with ../../password.txt
     char validFileNames[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH];
     char fileName[MAX_FILENAME_LENGTH];
@@ -222,18 +221,18 @@ int main(int argc, char *argv[]) {
     // the macros htonl and htons convert the values
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(port);
-    bind(sockfd, (struct sockaddr *) &server, (socklen_t) sizeof(server));
+    bind(sockfd, (struct sockaddr*) &server, (socklen_t) sizeof(server));
 
     for (;;) {
         // receive up to one byte less than declared because it will be NULL-terminated later
         socklen_t len = (socklen_t) sizeof(client);
-        ssize_t n = recvfrom(sockfd, packetReceived, sizeof(packetReceived) - 1, 0, 
-                (struct sockaddr *) &client, &len);
+        ssize_t n = recvfrom(sockfd, packetReceived, sizeof(packetReceived) - 1, 0,
+                             (struct sockaddr*) &client, &len);
         // NULL-terminate the packet received
         packetReceived[n] = '\0';
 
         // get the operation code of the packet
-        switch(getOperationCode(packetReceived)) {
+        switch (getOperationCode(packetReceived)) {
             case 1: // Read request (RRQ)
                 // fetch file name being requested
                 strcpy(fileName, getFileName(packetReceived));
@@ -243,18 +242,18 @@ int main(int argc, char *argv[]) {
                     setOperationCode(packetComposed, 5); // error
                     setErrorCodeAndMessage(packetComposed, 2); // access violation
                     sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                            (struct sockaddr*) &client, len);
+                           (struct sockaddr*) &client, len);
                     break;
                 }
 
                 // get the ip address of the client on human readable form
                 inet_ntop(AF_INET, &(client.sin_addr), addr, INET_ADDRSTRLEN);
                 printf("File \"%s\" requested from %s:%d\n", fileName, addr, client.sin_port);
-              
+
                 // be able to read both regular text files and binary files
                 char mode[3];
                 setMode(packetReceived, strlen(fileName), mode);
-                
+
                 // construct the file location
                 char fileLocation[100];
                 strcpy(fileLocation, dir_name);
@@ -265,12 +264,12 @@ int main(int argc, char *argv[]) {
 
                 // validate that this file exists in the directory
                 // if file exists, then check that the file can be opened
-                if (!validateFileExistance(validFileNames, fileName) || 
+                if (!validateFileExistance(validFileNames, fileName) ||
                         (fp = fopen(fileLocation, mode)) == NULL) {
                     setOperationCode(packetComposed, 5); // error
                     setErrorCodeAndMessage(packetComposed, 1); // file not found
                     sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                            (struct sockaddr*) &client, len);
+                           (struct sockaddr*) &client, len);
                     break;
                 }
 
@@ -281,21 +280,21 @@ int main(int argc, char *argv[]) {
                 data_size = setData(packetComposed, fp);
                 // increment the block number
                 nextBlockNumber = 2;
-                
-                sendto(sockfd, packetComposed, data_size, 0, 
-                        (struct sockaddr*) &client, len);
+
+                sendto(sockfd, packetComposed, data_size, 0,
+                       (struct sockaddr*) &client, len);
                 break;
             case 2: // Write request (WRQ) (does not support)
                 setOperationCode(packetComposed, 5); // error
                 setErrorCodeAndMessage(packetComposed, 4); // illegal operation
                 sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                        (struct sockaddr*) &client, len);
+                       (struct sockaddr*) &client, len);
                 break;
             case 3: // Data (DATA) (does not support)
                 setOperationCode(packetComposed, 5); // error
                 setErrorCodeAndMessage(packetComposed, 4); // illegal operation
                 sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                        (struct sockaddr*) &client, len);
+                       (struct sockaddr*) &client, len);
                 break;
             case 4: // Acknowledgment (ACK)
                 // get the block number of the acknowledged packet
@@ -305,14 +304,14 @@ int main(int argc, char *argv[]) {
                     // do nothing
                 } else if (prevBlockNumber == nextBlockNumber - 2) {
                     // a packet loss, so try to send again
-                    sendto(sockfd, packetComposed, data_size, 0, 
-                            (struct sockaddr*) &client, len);
+                    sendto(sockfd, packetComposed, data_size, 0,
+                           (struct sockaddr*) &client, len);
                 } else if (prevBlockNumber != nextBlockNumber - 1) {
                     // should not happen, so an error has occured
                     setOperationCode(packetComposed, 5); // error
                     setErrorCodeAndMessage(packetComposed, 5); // unknown transfer ID
                     sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                            (struct sockaddr*) &client, len);
+                           (struct sockaddr*) &client, len);
                     if (fp != NULL) {
                         fclose(fp);
                     }
@@ -324,8 +323,8 @@ int main(int argc, char *argv[]) {
                     // increment the block number with regards to overflow of unsigned short
                     nextBlockNumber = (nextBlockNumber+1) % USHRT_MAX;
 
-                    sendto(sockfd, packetComposed, data_size, 0, 
-                            (struct sockaddr*) &client, len);
+                    sendto(sockfd, packetComposed, data_size, 0,
+                           (struct sockaddr*) &client, len);
                 } else {
                     // done reading, close the file
                     if (fp != NULL) {
@@ -341,7 +340,7 @@ int main(int argc, char *argv[]) {
                 setOperationCode(packetComposed, 5); // error
                 setErrorCodeAndMessage(packetComposed, 4); // illegal operation
                 sendto(sockfd, packetComposed, PACKET_SIZE, 0,
-                        (struct sockaddr*) &client, len);
+                       (struct sockaddr*) &client, len);
                 break;
         }
     }
