@@ -1,11 +1,5 @@
 #include "tftpd.h"
 
-/*
- * Constant variables
- */
-const size_t PACKET_SIZE = 516;
-const int MAX_FILES_IN_DIRECTORY = 20;
-
 /****** Operation code ******
  *  2 bytes
  * +--------+
@@ -48,7 +42,8 @@ char* getFileName(char* msg) {
 /*
  * Validate that the file exists
  */
-short validateFileExistance(char* validFiles[MAX_FILES_IN_DIRECTORY], char* fileName) {
+short validateFileExistance(char validFiles[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH], 
+        char* fileName) {
     int i;
     for (i = 0; validFiles[i]; i++) {
         if (strcmp(validFiles[i], fileName) == 0) {
@@ -201,12 +196,12 @@ int main(int argc, char *argv[]) {
 
     // by opening the directory, I can secure that the client can't ask for data in 
     // parent directories; e.g. with ../../password.txt
-    char* validFileNames[MAX_FILES_IN_DIRECTORY];
-    char* fileName;
+    char validFileNames[MAX_FILES_IN_DIRECTORY][MAX_FILENAME_LENGTH];
+    char fileName[MAX_FILENAME_LENGTH];
     int fileCnt = 0;
     while ((dir_instance = readdir(directory)) != NULL) {
         if (dir_instance->d_name[0] != '.') {
-            validFileNames[fileCnt++] = dir_instance->d_name;
+            strcpy(validFileNames[fileCnt++], dir_instance->d_name);
         }
     }
     closedir(directory);
@@ -241,7 +236,7 @@ int main(int argc, char *argv[]) {
         switch(getOperationCode(packetReceived)) {
             case 1: // Read request (RRQ)
                 // fetch file name being requested
-                fileName = getFileName(packetReceived);
+                strcpy(fileName, getFileName(packetReceived));
 
                 // validate if the file request contains directory navigation
                 if (!validateFileViolation(fileName)) {
