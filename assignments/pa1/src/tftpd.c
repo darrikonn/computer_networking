@@ -185,11 +185,11 @@ int main(int argc, char* argv[]) {
 
     // open directory
     struct dirent* dir_instance;
-    char dir_name[20];
-    memcpy(dir_name, argv[2], 20); // use memcpy when we know the size (faster)
+    char dir_name[MAX_FILENAME_LENGTH];
+    memcpy(dir_name, argv[2], MAX_FILENAME_LENGTH); // use memcpy when we know the size (faster)
     DIR* directory = opendir(dir_name);
     if (directory == NULL) {
-        fprintf(stderr, "Could not open directory! Check directory path.\n");
+        perror("Could not open directory due to an error");
         exit(-1);
     }
 
@@ -221,7 +221,11 @@ int main(int argc, char* argv[]) {
     // the macros htonl and htons convert the values
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     server.sin_port = htons(port);
-    bind(sockfd, (struct sockaddr*) &server, (socklen_t) sizeof(server));
+    int sockSuccess = bind(sockfd, (struct sockaddr*) &server, (socklen_t) sizeof(server));
+    if (sockSuccess == -1) {
+        perror("Sock binding failed");
+        exit(-1);
+    }
 
     for (;;) {
         // receive up to one byte less than declared because it will be NULL-terminated later
