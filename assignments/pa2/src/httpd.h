@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <string.h>         // memset
 #include <unistd.h>         // close
+#include <glib.h>
 
 /*
  * Constant variables
