@@ -18,10 +18,12 @@
  * Constant variables
  */
 const int MESSAGE_SIZE = 512;
+const int TYPE_OF_REQUEST_SIZE = 5;
 
 /*
  * Functions
  */
-
+void getTypeOfRequestSize(char* toR, char* req);
+void initializeArray(char* arr, int size);
 
 #endif // HTTPD_H_

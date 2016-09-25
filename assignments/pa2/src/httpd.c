@@ -1,5 +1,20 @@
 #include "httpd.h"
 
+/*
+ * Get the type of request from the header
+ */
+void getTypeOfRequestSize(char* toR, char* req) {
+    char** type = g_strsplit(req, " ", 2);
+    strncpy(toR, type[0], TYPE_OF_REQUEST_SIZE);
+    g_strfreev(type);
+}
+
+/*
+ * Initialize the array with known values, i.e. 0
+ */
+void initalizeArray(char* arr, int size) {
+    memset(arr, '\0', size);
+}
 
 int main(int argc, char *argv[]) {
     // validate and parse parameters
@@ -58,11 +73,26 @@ int main(int argc, char *argv[]) {
         // receive from connfd, not sockfd
         ssize_t n = recv(connfd, message, sizeof(message)-1, 0);
         message[n] = '\0';
-        fprintf(stdout, "Received:\n%s\n", message);
+
+        fprintf(stdout, "Received: %s\n", message);
+
+
+        char** header = g_strsplit(message, "\n", -1);
+        
+        // get type of request
+        char typeOfRequest[TYPE_OF_REQUEST_SIZE];
+        initalizeArray(typeOfRequest, TYPE_OF_REQUEST_SIZE);
+        getTypeOfRequestSize(typeOfRequest, header[0]);
+
+        if (!strcmp(typeOfRequest, "GET")) {
+        } else if (!strcmp(typeOfRequest, "POST")) {
+        } else if (!strcmp(typeOfRequest, "HEAD")) {
+        }
 
         // send the message back
         send(connfd, message, (size_t) n, 0);
 
+        g_strfreev(header);
         // close the connection
         shutdown(connfd, SHUT_RDWR);
         close(connfd);
