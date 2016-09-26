@@ -23,6 +23,7 @@ const int TYPE_OF_REQUEST_SIZE = 5;
 /*
  * Functions
  */
+void constructHashTable(GHashTable* hashHeader, char* msg);
 void getTypeOfRequestSize(char* toR, char* req);
 void initializeArray(char* arr, int size);
 

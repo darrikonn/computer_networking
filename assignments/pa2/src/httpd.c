@@ -1,6 +1,27 @@
 #include "httpd.h"
 
 /*
+ * Construct a hash table from the header
+ */
+void constructHashTable(GHashTable* hashHeader, char* msg) {
+    char** header = g_strsplit(msg, "\n", -1);
+    for (int i = 0; header[i] != '\0' && strcmp(header[i], ""); i++) {
+        char** temp = g_strsplit(header[i], !i ? " " : ": ", 2);
+
+        if (temp != NULL && temp[0] != NULL && temp[1] != NULL) {
+            // insert type of request
+            if (!i) {
+                g_hash_table_insert(hashHeader, "Request-Type", temp[0]);
+            } else {
+                g_hash_table_insert(hashHeader, temp[0], temp[1]);
+            }
+        }
+        g_strfreev(temp);
+    }
+    g_strfreev(header);
+}
+
+/*
  * Get the type of request from the header
  */
 void getTypeOfRequestSize(char* toR, char* req) {
@@ -12,7 +33,7 @@ void getTypeOfRequestSize(char* toR, char* req) {
 /*
  * Initialize the array with known values, i.e. 0
  */
-void initalizeArray(char* arr, int size) {
+void initializeArray(char* arr, int size) {
     memset(arr, '\0', size);
 }
 
@@ -74,17 +95,16 @@ int main(int argc, char *argv[]) {
         ssize_t n = recv(connfd, message, sizeof(message)-1, 0);
         message[n] = '\0';
 
-        fprintf(stdout, "Received: %s\n", message);
+        fprintf(stdout, "Received:\n%s\n", message);
 
+        GHashTable* hashHeader = g_hash_table_new(g_str_hash, g_str_equal);
+        constructHashTable(hashHeader, message);
 
-        char** header = g_strsplit(message, "\n", -1);
-        
         // get type of request
-        char typeOfRequest[TYPE_OF_REQUEST_SIZE];
-        initalizeArray(typeOfRequest, TYPE_OF_REQUEST_SIZE);
-        getTypeOfRequestSize(typeOfRequest, header[0]);
+        gpointer typeOfRequest = g_hash_table_lookup(hashHeader, "Request-Type");
 
         if (!strcmp(typeOfRequest, "GET")) {
+            printf("IIIII'm geeeeeeeeeeeet");
         } else if (!strcmp(typeOfRequest, "POST")) {
         } else if (!strcmp(typeOfRequest, "HEAD")) {
         }
@@ -92,7 +112,9 @@ int main(int argc, char *argv[]) {
         // send the message back
         send(connfd, message, (size_t) n, 0);
 
-        g_strfreev(header);
+        // destroy the hash table
+        g_hash_table_destroy(hashHeader);
+
         // close the connection
         shutdown(connfd, SHUT_RDWR);
         close(connfd);
