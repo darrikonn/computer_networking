@@ -53,3 +53,11 @@ header: Upgrade-Insecure-Requests: 1
 header: Cache-Control: max-age=0
 header: 
 header:
+
+
+
+
+
+
+sleppa free fyrir full, en kalla i func
+foreach steal all i hash table + destroy table

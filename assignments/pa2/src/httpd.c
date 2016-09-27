@@ -3,31 +3,44 @@
 /*
  * Construct a hash table from the header
  */
-void constructHashTable(GHashTable* hashHeader, char* msg) {
-    char** header = g_strsplit(msg, "\n", -1);
-    for (int i = 0; header[i] != '\0' && strcmp(header[i], ""); i++) {
-        char** temp = g_strsplit(header[i], !i ? " " : ": ", 2);
+void constructHashTable(GHashTable* hash, char* msg) {
+    gchar** header = g_strsplit(msg, "\r\n", -1);
+
+    for (int i = 0; header[i] != '\0'; i++) {
+        gchar** temp = g_strsplit(header[i], !i ? " " : ": ", 2);
 
         if (temp != NULL && temp[0] != NULL && temp[1] != NULL) {
             // insert type of request
             if (!i) {
-                g_hash_table_insert(hashHeader, "Request-Type", temp[0]);
+                g_hash_table_insert(hash, g_strdup("request-type"), 
+                        g_ascii_strdown(temp[0], strlen(temp[0])));
             } else {
-                g_hash_table_insert(hashHeader, temp[0], temp[1]);
+                g_hash_table_insert(hash, g_ascii_strdown(temp[0], strlen(temp[0])), 
+                        g_ascii_strdown(temp[1], strlen(temp[1]))); 
             }
         }
         g_strfreev(temp);
     }
+
     g_strfreev(header);
 }
 
 /*
- * Get the type of request from the header
+ * Generate the html
  */
-void getTypeOfRequestSize(char* toR, char* req) {
-    char** type = g_strsplit(req, " ", 2);
-    strncpy(toR, type[0], TYPE_OF_REQUEST_SIZE);
-    g_strfreev(type);
+void generateHTML(GHashTable* hash, char* html) {
+    snprintf(html, HTML_SIZE, 
+            "<!DOCTYPE html>\
+              <html>\
+                <head>\
+                  <meta charset=\"UTF-8\">\
+                  <title>HTTP server</title>\
+                </head>\
+                <body>\
+                  <p>%s</p>\
+                </body>\
+              </html>", (char*)g_hash_table_lookup(hash, "host"));
+    /// nota glib string
 }
 
 /*
@@ -36,6 +49,13 @@ void getTypeOfRequestSize(char* toR, char* req) {
 void initializeArray(char* arr, int size) {
     memset(arr, '\0', size);
 }
+
+/*
+void myfun(gpointer key, gpointer val, gpointer u) {
+    printf("key: %s\nvalue: %s\n\n", (char*)key, (char*)val);
+}
+//g_hash_table_foreach(hash, myfun, NULL);
+*/
 
 int main(int argc, char *argv[]) {
     // validate and parse parameters
@@ -97,23 +117,30 @@ int main(int argc, char *argv[]) {
 
         fprintf(stdout, "Received:\n%s\n", message);
 
-        GHashTable* hashHeader = g_hash_table_new(g_str_hash, g_str_equal);
-        constructHashTable(hashHeader, message);
+        // construct a hash table from the header
+        GHashTable* hash = g_hash_table_new_full(g_str_hash,    // hash function
+                                                 g_str_equal,   // operator function
+                                                 g_free,        // key destructor
+                                                 g_free);       // value destructor
+        constructHashTable(hash, message);
 
         // get type of request
-        gpointer typeOfRequest = g_hash_table_lookup(hashHeader, "Request-Type");
+        char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
 
-        if (!strcmp(typeOfRequest, "GET")) {
+        if (typeOfRequest == NULL) {
+        } else if (!strcmp(typeOfRequest, "GET")) {
             printf("IIIII'm geeeeeeeeeeeet");
         } else if (!strcmp(typeOfRequest, "POST")) {
         } else if (!strcmp(typeOfRequest, "HEAD")) {
         }
 
         // send the message back
-        send(connfd, message, (size_t) n, 0);
+        char html[HTML_SIZE];
+        generateHTML(hash, html);
+        send(connfd, html, (size_t) n, 0);
 
         // destroy the hash table
-        g_hash_table_destroy(hashHeader);
+        g_hash_table_destroy(hash);
 
         // close the connection
         shutdown(connfd, SHUT_RDWR);
