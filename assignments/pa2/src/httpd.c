@@ -3,17 +3,23 @@
 /*
  * Construct a hash table from the header
  */
-void constructHashTable(GHashTable* hash, char* msg) {
-    gchar** header = g_strsplit(msg, "\r\n", -1);
+void constructHashTable(GHashTable* hash, char* message) {
+    gchar** header = g_strsplit(message, "\r\n", -1);
 
     for (int i = 0; header[i] != '\0'; i++) {
-        gchar** temp = g_strsplit(header[i], !i ? " " : ": ", 2);
+        gchar** temp = !i 
+            ? g_strsplit(header[i], " ", -1)
+            : g_strsplit(header[i], ": ", 2);
 
         if (temp != NULL && temp[0] != NULL && temp[1] != NULL) {
             // insert type of request
             if (!i) {
+                // get type of request
                 g_hash_table_insert(hash, g_strdup("request-type"), 
                         g_ascii_strdown(temp[0], strlen(temp[0])));
+                // get url
+                g_hash_table_insert(hash, g_strdup("url"), 
+                        g_ascii_strdown(temp[1], strlen(temp[1])));
             } else {
                 g_hash_table_insert(hash, g_ascii_strdown(temp[0], strlen(temp[0])), 
                         g_ascii_strdown(temp[1], strlen(temp[1]))); 
@@ -26,21 +32,73 @@ void constructHashTable(GHashTable* hash, char* msg) {
 }
 
 /*
+ * Generate post data, if it's a post request
+ */
+void getPostData(char* postData, GHashTable* hash, RequestType type) {
+    if (type == POST) {
+        g_snprintf(postData, DATA_SIZE, "%s%s%s",
+                "<h3>Post data:</h3><p>",
+                (char*)g_hash_table_lookup(hash, "content"),
+                "</p>");
+    }
+}
+
+/*
  * Generate the html
  */
-void generateHTML(GHashTable* hash, char* html) {
-    snprintf(html, HTML_SIZE, 
-            "<!DOCTYPE html>\
-              <html>\
-                <head>\
-                  <meta charset=\"UTF-8\">\
-                  <title>HTTP server</title>\
-                </head>\
-                <body>\
-                  <p>%s</p>\
-                </body>\
-              </html>", (char*)g_hash_table_lookup(hash, "host"));
-    /// nota glib string
+int generateHTML(GHashTable* hash, char* html, char* addr, int port, char* postData) {
+    return g_snprintf(html, HTML_SIZE, "%s%s%s %s:%d%s%s",
+            "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head><body><p>", 
+            (char*)g_hash_table_lookup(hash, "host"),
+            (char*)g_hash_table_lookup(hash, "url"),
+            addr, port,
+            postData,
+            "</p></body></html>");
+}
+
+/*
+ * Generate the server response
+ */
+void generateServerResponse(char* msg, char* html, int contentLength, RequestType type) {
+    char date[DATE_SIZE];
+    getCurrentDate(date);
+    int len = g_snprintf(msg, MESSAGE_SIZE, "%s\n%s%s\n%s\n%s%s\n%s\n%s\n", 
+            "HTTP/1.1 200 OK",
+            "Date: ", date,
+            "Server: Apache",
+            "Last-Modified: ", date,
+            "Accept-Ranges: bytes",
+            "Vary: Accept-Encoding");
+
+    if (type != HEAD) {
+        msg += g_snprintf(msg+len, MESSAGE_SIZE, "%s%d\n%s\n\n%s", 
+                "Content-Length: ", contentLength,
+                "Content-Type: text/html",
+                html);
+    }
+
+
+    /// setja rett iso stadal a date
+}
+
+/*
+ * Get the current date
+ */
+void getCurrentDate(char* date) {
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+
+    g_snprintf(date, DATE_SIZE, "%d-%d-%d %d:%d:%d", 
+            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, 
+            tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+/*
+ * Get the address of the client
+ */
+void getClientAddr(struct sockaddr_in client, char* addr) {
+    // get the ip address of the client on human readable form
+    inet_ntop(AF_INET, &(client.sin_addr), addr, INET_ADDRSTRLEN);
 }
 
 /*
@@ -48,6 +106,23 @@ void generateHTML(GHashTable* hash, char* html) {
  */
 void initializeArray(char* arr, int size) {
     memset(arr, '\0', size);
+}
+
+/*
+ * 
+ */
+RequestType getRequestType(char* type) {
+    if (type == NULL) {
+        return ERROR;
+    } else if (!strcmp(type, "get")) {
+        return GET;
+    } else if (!strcmp(type, "post")) {
+        return POST;
+    } else if (!strcmp(type, "head")) {
+        return HEAD;
+    }
+
+    return ERROR;
 }
 
 /*
@@ -73,7 +148,7 @@ int main(int argc, char *argv[]) {
     }
 
     int sockfd;
-    char message[MESSAGE_SIZE];
+    char message[MESSAGE_SIZE], addr[INET_ADDRSTRLEN];
     struct sockaddr_in server, client;
 
     // create a TCP socket and connect to server
@@ -115,8 +190,6 @@ int main(int argc, char *argv[]) {
         ssize_t n = recv(connfd, message, sizeof(message)-1, 0);
         message[n] = '\0';
 
-        fprintf(stdout, "Received:\n%s\n", message);
-
         // construct a hash table from the header
         GHashTable* hash = g_hash_table_new_full(g_str_hash,    // hash function
                                                  g_str_equal,   // operator function
@@ -124,20 +197,34 @@ int main(int argc, char *argv[]) {
                                                  g_free);       // value destructor
         constructHashTable(hash, message);
 
+        // get clients address on human readable form
+        getClientAddr(client, addr);
+
         // get type of request
         char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
+        RequestType type =  getRequestType(typeOfRequest);
+        
+        fprintf(stdout, "Received:\n%s request from %s:%d\n", 
+                typeOfRequest, addr, client.sin_port);
 
-        if (typeOfRequest == NULL) {
-        } else if (!strcmp(typeOfRequest, "GET")) {
-            printf("IIIII'm geeeeeeeeeeeet");
-        } else if (!strcmp(typeOfRequest, "POST")) {
-        } else if (!strcmp(typeOfRequest, "HEAD")) {
+        char responseMessage[MESSAGE_SIZE];
+        initializeArray(responseMessage, MESSAGE_SIZE);
+
+        if (type == ERROR) {
+            // send not implemented
+        } else if (type == HEAD) {
+            generateServerResponse(responseMessage, NULL, 0, type);
+        } else {
+            char html[HTML_SIZE];
+            char postData[DATA_SIZE];
+            initializeArray(postData, DATA_SIZE);
+            getPostData(postData, hash, type);
+            int contentLength = generateHTML(hash, html, addr, client.sin_port, postData);
+            generateServerResponse(responseMessage, html, contentLength, type);
         }
 
         // send the message back
-        char html[HTML_SIZE];
-        generateHTML(hash, html);
-        send(connfd, html, (size_t) n, 0);
+        send(connfd, responseMessage, (size_t) n, 0);
 
         // destroy the hash table
         g_hash_table_destroy(hash);
@@ -149,15 +236,3 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
