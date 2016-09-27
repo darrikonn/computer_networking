@@ -16,7 +16,7 @@ void constructHashTable(GHashTable* hash, char* message) {
             if (!i) {
                 // get type of request
                 g_hash_table_insert(hash, g_strdup("request-type"), 
-                        g_ascii_strdown(temp[0], strlen(temp[0])));
+                        g_strndup(temp[0], strlen(temp[0])));
                 // get url
                 g_hash_table_insert(hash, g_strdup("url"), 
                         g_ascii_strdown(temp[1], strlen(temp[1])));
@@ -59,9 +59,7 @@ int generateHTML(GHashTable* hash, char* html, char* addr, int port, char* postD
 /*
  * Generate the server response
  */
-void generateServerResponse(char* msg, char* html, int contentLength, RequestType type) {
-    char date[DATE_SIZE];
-    getCurrentDate(date);
+void generateServerResponse(char* msg, char* date, char* html, int contentLength, RequestType type) {
     int len = g_snprintf(msg, MESSAGE_SIZE, "%s\n%s%s\n%s\n%s%s\n%s\n%s\n", 
             "HTTP/1.1 200 OK",
             "Date: ", date,
@@ -77,20 +75,19 @@ void generateServerResponse(char* msg, char* html, int contentLength, RequestTyp
                 html);
     }
 
-
     /// setja rett iso stadal a date
 }
 
 /*
- * Get the current date
+ * Get the current date on ISO 8601 form
  */
 void getCurrentDate(char* date) {
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
+    time_t rawtime;
+    struct tm* timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
 
-    g_snprintf(date, DATE_SIZE, "%d-%d-%d %d:%d:%d", 
-            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, 
-            tm.tm_hour, tm.tm_min, tm.tm_sec);
+    strftime(date, DATE_SIZE, "%a, %d %b %G %T GMT", timeinfo);
 }
 
 /*
@@ -109,16 +106,16 @@ void initializeArray(char* arr, int size) {
 }
 
 /*
- * 
+ * Get the actual type of the request, and return as enum request type
  */
 RequestType getRequestType(char* type) {
     if (type == NULL) {
         return ERROR;
-    } else if (!strcmp(type, "get")) {
+    } else if (!strcmp(type, "GET")) {
         return GET;
-    } else if (!strcmp(type, "post")) {
+    } else if (!strcmp(type, "POST")) {
         return POST;
-    } else if (!strcmp(type, "head")) {
+    } else if (!strcmp(type, "HEAD")) {
         return HEAD;
     }
 
@@ -126,11 +123,44 @@ RequestType getRequestType(char* type) {
 }
 
 /*
-void myfun(gpointer key, gpointer val, gpointer u) {
-    printf("key: %s\nvalue: %s\n\n", (char*)key, (char*)val);
+ * Create the initial log message
+ */
+void createInitialLog() {
+    char date[DATE_SIZE];
+    getCurrentDate(date);
+    char message[LOG_MESSAGE_SIZE];
+    g_snprintf(message, LOG_MESSAGE_SIZE, "%s -> Starting to log:\n%s", 
+            date, "=================================================");
+
+    logToFile(message);
 }
-//g_hash_table_foreach(hash, myfun, NULL);
-*/
+
+/*
+ * Create the log message for all requests
+ */
+void createRequestLog(char* date, char* addr, int port, GHashTable* hash, int resp) {
+    char message[LOG_MESSAGE_SIZE];
+    g_snprintf(message, LOG_MESSAGE_SIZE, "%s : %s:%d %s %s : %d",
+            date, addr, port,
+            (char*)g_hash_table_lookup(hash, "request-type"), 
+            (char*)g_hash_table_lookup(hash, "url"), resp);
+
+    logToFile(message);
+}
+
+/*
+ * Log the message to the log file 
+ */
+void logToFile(char* message) {
+    // open file in appending mode
+    FILE* f = fopen("log/httpd.log", "a");
+    if (f == NULL) {
+        perror("fopen()");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(f, "%s\n", message);
+    fclose(f);
+}
 
 int main(int argc, char *argv[]) {
     // validate and parse parameters
@@ -146,6 +176,9 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Port number is invalid!\n");
         exit(EXIT_FAILURE);
     }
+
+    // create initial log
+    createInitialLog();
 
     int sockfd;
     char message[MESSAGE_SIZE], addr[INET_ADDRSTRLEN];
@@ -199,32 +232,41 @@ int main(int argc, char *argv[]) {
 
         // get clients address on human readable form
         getClientAddr(client, addr);
+        int clientPort = client.sin_port;
 
         // get type of request
         char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
-        RequestType type =  getRequestType(typeOfRequest);
+        RequestType type = getRequestType(typeOfRequest);
         
         fprintf(stdout, "Received:\n%s request from %s:%d\n", 
-                typeOfRequest, addr, client.sin_port);
+                typeOfRequest, addr, clientPort);
 
+        // initialize the response message
         char responseMessage[MESSAGE_SIZE];
         initializeArray(responseMessage, MESSAGE_SIZE);
+
+        // get the current date
+        char date[DATE_SIZE];
+        getCurrentDate(date);
 
         if (type == ERROR) {
             // send not implemented
         } else if (type == HEAD) {
-            generateServerResponse(responseMessage, NULL, 0, type);
+            generateServerResponse(responseMessage, date, NULL, 0, type);
         } else {
             char html[HTML_SIZE];
             char postData[DATA_SIZE];
             initializeArray(postData, DATA_SIZE);
             getPostData(postData, hash, type);
-            int contentLength = generateHTML(hash, html, addr, client.sin_port, postData);
-            generateServerResponse(responseMessage, html, contentLength, type);
+            int contentLength = generateHTML(hash, html, addr, clientPort, postData);
+            generateServerResponse(responseMessage, date, html, contentLength, type);
         }
 
+        // log the request
+        createRequestLog(date, addr, clientPort, hash, 200);
+
         // send the message back
-        send(connfd, responseMessage, (size_t) n, 0);
+        send(connfd, responseMessage, MESSAGE_SIZE, 0);
 
         // destroy the hash table
         g_hash_table_destroy(hash);

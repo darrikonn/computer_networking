@@ -8,7 +8,9 @@ LDLIBS =
 
 .DEFAULT: all
 .PHONY: all
-all: httpd
+all: 
+	mkdir -p '../log'
+	$(CC) $(CFLAGS) -o httpd httpd.c
 
 clean:
 	rm -f *.o
