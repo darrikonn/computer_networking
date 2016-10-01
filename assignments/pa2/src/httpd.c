@@ -6,26 +6,35 @@
 void constructHashTable(GHashTable* hash, char* message) {
     gchar** header = g_strsplit(message, "\r\n", -1);
 
+    short isData = 0;
     for (int i = 0; header[i] != '\0'; i++) {
-        gchar** temp = !i 
-            ? g_strsplit(header[i], " ", -1)
-            : g_strsplit(header[i], ": ", 2);
+        if (!strcmp(header[i], "")) { // check if header is empty, then the next header is the data
+            isData = 1;
+            continue;
+        } else if (isData) { // insert the data into the hash table
+            g_hash_table_insert(hash, g_strdup("data"), 
+                    g_strndup(header[i], strlen(header[i])));
+        } else {
+            gchar** temp = !i 
+                ? g_strsplit(header[i], " ", -1)
+                : g_strsplit(header[i], ": ", 2);
 
-        if (temp != NULL && temp[0] != NULL && temp[1] != NULL) {
-            // insert type of request
-            if (!i) {
-                // get type of request
-                g_hash_table_insert(hash, g_strdup("request-type"), 
-                        g_strndup(temp[0], strlen(temp[0])));
-                // get url
-                g_hash_table_insert(hash, g_strdup("url"), 
-                        g_ascii_strdown(temp[1], strlen(temp[1])));
-            } else {
-                g_hash_table_insert(hash, g_ascii_strdown(temp[0], strlen(temp[0])), 
-                        g_ascii_strdown(temp[1], strlen(temp[1]))); 
+            if (temp != NULL && temp[0] != NULL && temp[1] != NULL) {
+                if (!i) { // check if the header is type of request
+                    // get type of request
+                    g_hash_table_insert(hash, g_strdup("request-type"), 
+                            g_strndup(temp[0], strlen(temp[0])));
+                    // get url
+                    g_hash_table_insert(hash, g_strdup("url"), 
+                            g_ascii_strdown(temp[1], strlen(temp[1])));
+                } else {
+                    // insert header instance into hash table
+                    g_hash_table_insert(hash, g_ascii_strdown(temp[0], strlen(temp[0])), 
+                            g_ascii_strdown(temp[1], strlen(temp[1]))); 
+                }
             }
+            g_strfreev(temp);
         }
-        g_strfreev(temp);
     }
 
     g_strfreev(header);
@@ -34,19 +43,32 @@ void constructHashTable(GHashTable* hash, char* message) {
 /*
  * Generate post data, if it's a post request
  */
-void getPostData(char* postData, GHashTable* hash, RequestType type) {
+int getPostData(char* postData, GHashTable* hash, RequestType type) {
     if (type == POST) {
+        char* data = g_hash_table_lookup(hash, "data");
+        // prevent XSS
+        if (strstr(data, "<script") ||
+                strstr(data, "<SCRIPT")) return 0;
+
         g_snprintf(postData, DATA_SIZE, "%s%s%s",
                 "<h3>Post data:</h3><p>",
-                (char*)g_hash_table_lookup(hash, "content"),
+                (char*)g_hash_table_lookup(hash, "data"),
                 "</p>");
     }
+
+    return 1;
 }
 
 /*
  * Generate the html
  */
-int generateHTML(GHashTable* hash, char* html, char* addr, int port, char* postData) {
+int generateHTML(GHashTable* hash, char* html, char* addr, int port, RequestType type) {
+    char postData[DATA_SIZE];
+    initializeArray(postData, DATA_SIZE);
+    if (!getPostData(postData, hash, type)) {
+        return generateErrorHTML(html, "403 Forbidden");
+    }
+
     return g_snprintf(html, HTML_SIZE, "%s%s%s %s:%d%s%s",
             "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head><body><p>", 
             (char*)g_hash_table_lookup(hash, "host"),
@@ -54,6 +76,16 @@ int generateHTML(GHashTable* hash, char* html, char* addr, int port, char* postD
             addr, port,
             postData,
             "</p></body></html>");
+}
+
+/*
+ * Generate html error message
+ */
+int generateErrorHTML(char* html, char* errorMessage) {
+    return g_snprintf(html, HTML_SIZE, "%s%s%s",
+            "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head><body><h1>", 
+            errorMessage,
+            "</h1></body></html>");
 }
 
 /*
@@ -74,8 +106,6 @@ void generateServerResponse(char* msg, char* date, char* html, int contentLength
                 "Content-Type: text/html",
                 html);
     }
-
-    /// setja rett iso stadal a date
 }
 
 /*
@@ -162,6 +192,34 @@ void logToFile(char* message) {
     fclose(f);
 }
 
+/*
+ * Check for connections that are past the connection timout
+ */
+void checkConnectionTimeouts(time_t* clientsTimeOuts, size_t ctoSize, fd_set* fdset) {
+    for (size_t i = 0; i < ctoSize; i++) {
+        double t;
+        if ((t = clientsTimeOuts[i]) != -1) {
+            time_t now;
+            time(&now);
+            if (difftime(now, t) > CONNECTION_TIME_OUT) {
+                // close the connection
+                closeConnection(clientsTimeOuts, i, fdset);
+            }
+        }
+    }
+}
+
+/*
+ * Close the connection
+ */
+void closeConnection(time_t* clientsTimeOuts, int connfd, fd_set* fdset) {
+    printf("Shutting down\n");
+    shutdown(connfd, SHUT_RDWR);
+    close(connfd);
+    clientsTimeOuts[connfd] = -1;
+    FD_CLR(connfd, fdset);
+}
+
 int main(int argc, char *argv[]) {
     // validate and parse parameters
     if (argc != 2) {
@@ -176,9 +234,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Port number is invalid!\n");
         exit(EXIT_FAILURE);
     }
-
-    // create initial log
-    createInitialLog();
 
     int sockfd;
     char message[MESSAGE_SIZE], addr[INET_ADDRSTRLEN];
@@ -209,71 +264,122 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    int retval, maxfd = sockfd;
+
+    // initialize the file descriptor set
+    fd_set fdset, tempset;
+    FD_ZERO(&fdset);
+    FD_SET(sockfd, &fdset);
+    struct timeval timeout;
+
+    // initialize the client timeouts
+    time_t clientsTimeOuts[MAX_CONNECTIONS];
+    memset(clientsTimeOuts, -1, sizeof(clientsTimeOuts));
+    size_t ctoSize = sizeof(clientsTimeOuts)/sizeof(time_t);
+
+    // create initial log
+    createInitialLog();
+
     for (;;) {
-        // we first have to accept a tcp connection.
-        // connfd is a fresh handle dedicated to this connection.
-        socklen_t len = (socklen_t) sizeof(client);
-        int connfd;
-        if ((connfd = accept(sockfd, (struct sockaddr*) &client, &len)) < 0) {
-            perror("accept()");
-            exit(EXIT_FAILURE);
-        }
+        // check for inactivity of file descriptors
+        checkConnectionTimeouts(clientsTimeOuts, ctoSize, &fdset);
 
-        // receive from connfd, not sockfd
-        ssize_t n = recv(connfd, message, sizeof(message)-1, 0);
-        message[n] = '\0';
-
-        // construct a hash table from the header
-        GHashTable* hash = g_hash_table_new_full(g_str_hash,    // hash function
-                                                 g_str_equal,   // operator function
-                                                 g_free,        // key destructor
-                                                 g_free);       // value destructor
-        constructHashTable(hash, message);
-
-        // get clients address on human readable form
-        getClientAddr(client, addr);
-        int clientPort = client.sin_port;
-
-        // get type of request
-        char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
-        RequestType type = getRequestType(typeOfRequest);
+        // copy the fdset to the temp variable tempset
+        memcpy(&tempset, &fdset, sizeof(tempset));
         
-        fprintf(stdout, "Received:\n%s request from %s:%d\n", 
-                typeOfRequest, addr, clientPort);
+        // initialize the timeout data structure
+        timeout.tv_sec = 3;
+        timeout.tv_usec = 0;
 
-        // initialize the response message
-        char responseMessage[MESSAGE_SIZE];
-        initializeArray(responseMessage, MESSAGE_SIZE);
+        // block the program until input or output is ready on a specified 
+        // set of file descriptors, or until a timer expires, whichever comes first.
+        if ((retval = select(maxfd+1, &tempset, NULL, NULL, &timeout)) == -1) {
+            perror("select()");
+            exit(EXIT_FAILURE);
+        } else if (retval > 0) {
+            // check if filedes is a member of the file descriptor set set. 
+            if (FD_ISSET(sockfd, &tempset)) {
+                // accept a tcp connection.
+                // connfd is a fresh handle dedicated to this connection.
+                socklen_t len = (socklen_t) sizeof(client);
+                int connfd;
+                if ((connfd = accept(sockfd, (struct sockaddr*) &client, &len)) < 0) {
+                    perror("accept()");
+                    exit(EXIT_FAILURE);
+                }
+                // start timing the connection
+                time(&clientsTimeOuts[connfd]);
 
-        // get the current date
-        char date[DATE_SIZE];
-        getCurrentDate(date);
+                // insert into the set
+                FD_SET(connfd, &fdset);
+                FD_CLR(sockfd, &tempset);
+                maxfd = maxfd < connfd ? connfd : maxfd;
+            }
 
-        if (type == ERROR) {
-            // send not implemented
-        } else if (type == HEAD) {
-            generateServerResponse(responseMessage, date, NULL, 0, type);
-        } else {
-            char html[HTML_SIZE];
-            char postData[DATA_SIZE];
-            initializeArray(postData, DATA_SIZE);
-            getPostData(postData, hash, type);
-            int contentLength = generateHTML(hash, html, addr, clientPort, postData);
-            generateServerResponse(responseMessage, date, html, contentLength, type);
+            for (int i = 0; i <= maxfd; i++) {
+                // check if filedes is a member of the file descriptor set set. 
+                if (!FD_ISSET(i, &tempset)) continue;
+                time(&clientsTimeOuts[i]);
+
+                ssize_t n = recv(i, message, sizeof(message)-1, 0);
+                message[n] = '\0';
+
+                // construct a hash table from the header
+                GHashTable* hash = g_hash_table_new_full(g_str_hash,    // hash function
+                        g_str_equal,   // operator function
+                        g_free,        // key destructor
+                        g_free);       // value destructor
+                constructHashTable(hash, message);
+
+                // get clients address on human readable form
+                getClientAddr(client, addr);
+                int clientPort = client.sin_port;
+
+                // get type of request
+                char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
+                RequestType type = getRequestType(typeOfRequest);
+
+                fprintf(stdout, "Received:\n%s request from %s:%d\n", 
+                        typeOfRequest, addr, clientPort);
+
+                // initialize the response message
+                char responseMessage[MESSAGE_SIZE];
+                initializeArray(responseMessage, MESSAGE_SIZE);
+
+                // get the current date
+                char date[DATE_SIZE];
+                getCurrentDate(date);
+
+                char html[HTML_SIZE];
+
+                if (type == ERROR) {
+                    // not implemented
+                    int contentLength = generateErrorHTML(html, "400 Bad Request");
+                    generateServerResponse(responseMessage, date, html, contentLength, type);
+                } else if (type == HEAD) {
+                    generateServerResponse(responseMessage, date, NULL, 0, type);
+                } else { // type = POST | GET
+                    int contentLength = generateHTML(hash, html, addr, clientPort, type);
+                    generateServerResponse(responseMessage, date, html, contentLength, type);
+                }
+
+                // log the request
+                createRequestLog(date, addr, clientPort, hash, 200);
+
+                // send the message back
+                send(i, responseMessage, MESSAGE_SIZE, 0);
+
+                // check for persistant connection
+                char* connection = g_hash_table_lookup(hash, "connection");
+                if (connection == NULL || strcmp(connection, "keep-alive")) {
+                    // close the connection
+                    closeConnection(clientsTimeOuts, i, &fdset);
+                }
+
+                // destroy the hash table
+                g_hash_table_destroy(hash);
+            }
         }
-
-        // log the request
-        createRequestLog(date, addr, clientPort, hash, 200);
-
-        // send the message back
-        send(connfd, responseMessage, MESSAGE_SIZE, 0);
-
-        // destroy the hash table
-        g_hash_table_destroy(hash);
-
-        // close the connection
-        shutdown(connfd, SHUT_RDWR);
-        close(connfd);
     }
 
 	return 0;

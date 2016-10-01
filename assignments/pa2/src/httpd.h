@@ -15,18 +15,22 @@
 #include <unistd.h>         // close
 #include <glib.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/select.h>
 
 /*
  * Constant variables
  */
-const int MESSAGE_SIZE = 2048; // kringum 1500, max ip size minus header
-const int HTML_SIZE = 1500;
-const int DATE_SIZE = 60;
-const int DATA_SIZE = 1024;
-const int LOG_MESSAGE_SIZE = 300;
+const size_t MESSAGE_SIZE = 2048; // kringum 1500, max ip size minus header
+const size_t HTML_SIZE = 1500;
+const size_t DATE_SIZE = 60;
+const size_t DATA_SIZE = 1024;
+const size_t LOG_MESSAGE_SIZE = 300;
+const size_t MAX_CONNECTIONS = 256;
+const size_t CONNECTION_TIME_OUT = 30;
 
 /*
- *
+ * Enums
  */
 typedef enum {
     GET, POST, HEAD, ERROR
@@ -36,8 +40,9 @@ typedef enum {
  * Functions
  */
 void constructHashTable(GHashTable* hash, char* message);
-void getPostData(char* postData, GHashTable* hash, RequestType type);
-int generateHTML(GHashTable* hash, char* html, char* addr, int port, char* postData);
+int getPostData(char* postData, GHashTable* hash, RequestType type);
+int generateHTML(GHashTable* hash, char* html, char* addr, int port, RequestType type);
+int generateErrorHTML(char* html, char* errorMessage);
 void generateServerResponse(char* message, char* date, char* html, 
         int contentLength, RequestType type);
 void getCurrentDate(char* date);
@@ -47,5 +52,7 @@ RequestType getRequestType(char* type);
 void createInitialLog();
 void createRequestLog(char* date, char* addr, int port, GHashTable* hash, int resp);
 void logToFile(char* message);
+void checkConnectionTimeouts(time_t* clientsTimeOuts, size_t ctoSize, fd_set* fdset);
+void closeConnection(time_t* clientsTimeOuts, int connfd, fd_set* fdset);
 
 #endif // HTTPD_H_
