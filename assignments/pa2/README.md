@@ -1,9 +1,14 @@
 # HTTP server
-This is a simple HTTP server programmed in C. The C programming language was chosen to practice secure programming and understand the security implications of server programming.
+This is a simple HTTP server; programmed in C. The C programming language was chosen to practice secure programming and understand the security implications of server programming.<br/>
+The source of the program is one level above /src. The reason for that is because, the server will log its requests to a log file.
 
 ## Implementation
 The server was implemented in the aforementioned programming language C.<br/>
-The server accepts one command line argument: "port".
+The server allows the following requests: GET, POST and HEAD. There can be up to 256 parallel connections, where the connection can be persistent if the client requests it. <br/>
+The server can also accept queries to set the background color of the HTML page.</br>
+The server uses cookies to "remember" the last requested background color of the HTML page.<br/>
+The server accepts one command line argument: "port".<br/>
+**NOTE**: I chose the name "color" instead of "colour" for the color page. I thought it was more appropriate.
 
 ## Build
 To build the application, run the following command from the source of the program:
@@ -15,49 +20,17 @@ To run the server, run the following command from the source of the program:
 
 e.g. ./src/httpd 2000
 
+## Request from server
+To make a request to the server, visit the following index page in a web browser:
+> localhost:<port>
 
+Other possible urls are:
+> localhost:<port>/color?bg=red
+> localhost:<port>/color
+> localhost:<port>/test?key=value
 
+<br/>
 
-Client request:
-
-GET /hello.txt HTTP/1.1
-User-Agent: curl/7.16.3 libcurl/7.16.3 OpenSSL/0.9.7l zlib/1.2.3
-Host: www.example.com
-Accept-Language: en, mi
-
-
-Server response:
-
-HTTP/1.1 200 OK
-Date: Mon, 27 Jul 2009 12:28:53 GMT
-Server: Apache
-Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
-ETag: "34aa387-d-1568eb00"
-Accept-Ranges: bytes
-Content-Length: 51
-Vary: Accept-Encoding
-Content-Type: text/plain
-
-Hello World! My payload includes a trailing CRLF.
-
-
-header: GET / HTTP/1.1
-header: Host: localhost:2000
-header: User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:49.0) Gecko/20100101 Firefox/49.0
-header: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
-header: Accept-Language: en-US,en;q=0.5
-header: Accept-Encoding: gzip, deflate
-header: Cookie: color=red
-header: Connection: keep-alive
-header: Upgrade-Insecure-Requests: 1
-header: Cache-Control: max-age=0
-header: 
-header:
-
-
-
-
-
-
-sleppa free fyrir full, en kalla i func
-foreach steal all i hash table + destroy table
+You can also perform POST and HEAD requests any way you like, e.g. with curl:
+> curl -X POST -d "some data" localhost:<port> 
+> curl -I localhost:<port> 

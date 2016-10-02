@@ -21,7 +21,7 @@
 /*
  * Constant variables
  */
-const size_t MESSAGE_SIZE = 2048; // kringum 1500, max ip size minus header
+const size_t MESSAGE_SIZE = 2048;
 const size_t HTML_SIZE = 1500;
 const size_t DATE_SIZE = 60;
 const size_t DATA_SIZE = 1024;
@@ -30,6 +30,16 @@ const size_t MAX_CONNECTIONS = 256;
 const size_t CONNECTION_TIME_OUT = 30;
 const size_t BODY_SIZE = 60;
 const size_t QUERY_DATA_SIZE = 100;
+
+/*
+ * Macros
+ */
+#define HTTP_OK 200
+#define HTTP_CREATED 201
+#define HTTP_BAD_REQUEST 400
+#define HTTP_FORBIDDEN 403
+#define HTTP_NOT_FOUND 404
+#define HTTP_INTERNAL_SERVER_ERROR 500
 
 /*
  * Enums

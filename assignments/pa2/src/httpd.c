@@ -41,7 +41,7 @@ void constructHashTable(GHashTable* hash, char* message) {
 }
 
 /*
- * Generate post data, if it's a post request
+ * Generate a post data, if it's a post request
  */
 int getPostData(char* postData, GHashTable* hash, RequestType type) {
     if (type == POST) {
@@ -51,7 +51,7 @@ int getPostData(char* postData, GHashTable* hash, RequestType type) {
 
         g_snprintf(postData, DATA_SIZE, "%s%s%s",
                 "<h3>Post data:</h3><p>",
-                data,
+                data == NULL ? "" : data,
                 "</p>");
     }
 
@@ -59,14 +59,14 @@ int getPostData(char* postData, GHashTable* hash, RequestType type) {
 }
 
 /*
- * Generate the html
+ * Generate a html message
  */
 int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port, RequestType type) {
     char postData[DATA_SIZE];
     initializeArray(postData, DATA_SIZE);
     if (!getPostData(postData, hash, type)) {
         // log the request
-        createRequestLog(date, addr, port, hash, 403);
+        createRequestLog(date, addr, port, hash, HTTP_FORBIDDEN);
 
         // post data contains XSS
         return generateErrorHTML(html, "403 Forbidden");
@@ -79,10 +79,11 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
     
     char body[BODY_SIZE];
     g_stpcpy(body, "<body");
+
     char* url = g_hash_table_lookup(hash, "url");
     if (url == NULL) {
         // log the request
-        createRequestLog(date, addr, port, hash, 500);
+        createRequestLog(date, addr, port, hash, HTTP_INTERNAL_SERVER_ERROR);
 
         // internal server error
         return generateErrorHTML(html, "500 Internal Server Error");
@@ -101,7 +102,7 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
             g_strfreev(keyval);
 
             // log the request
-            createRequestLog(date, addr, port, hash, 404);
+            createRequestLog(date, addr, port, hash, HTTP_NOT_FOUND);
 
             return generateErrorHTML(html, "404 Not Found");
         }
@@ -115,13 +116,13 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
         g_strfreev(keyval);
     } else if (g_strcmp0(url, "/")) {
         // log the request
-        createRequestLog(date, addr, port, hash, 404);
+        createRequestLog(date, addr, port, hash, HTTP_NOT_FOUND);
 
         return generateErrorHTML(html, "404 Not Found");
     }
 
     // log the request, either GET or POST
-    createRequestLog(date, addr, port, hash, type == GET ? 200 : 201);
+    createRequestLog(date, addr, port, hash, type == GET ? HTTP_OK : HTTP_CREATED);
 
     return g_snprintf(html, HTML_SIZE, "%s%s%s%s%s %s:%d%s%s%s%s",
             "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head>",
@@ -136,7 +137,7 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
 }
 
 /*
- * Generate html error message
+ * Generate a html error message
  */
 int generateErrorHTML(char* html, char* errorMessage) {
     return g_snprintf(html, HTML_SIZE, "%s%s%s",
@@ -146,7 +147,7 @@ int generateErrorHTML(char* html, char* errorMessage) {
 }
 
 /*
- * Generate the server response
+ * Generate a server response
  */
 void generateServerResponse(GHashTable* hash, char* msg, char* date, char* html, 
         int contentLength, RequestType type) {
@@ -159,7 +160,7 @@ void generateServerResponse(GHashTable* hash, char* msg, char* date, char* html,
             "Vary: Accept-Encoding");
 
     char* url = g_hash_table_lookup(hash, "url");
-    if (url != NULL && g_str_has_prefix(url, "/color?bg=")) {
+    if (url != NULL && g_str_has_prefix(url, "/color?bg=")) { // check if cookie is present
         // insert into the cookie
         gchar** keyval = g_strsplit(url, "=", 2);
         len += g_snprintf(msg+len, MESSAGE_SIZE, "Set-Cookie: color=%s; %s\n",
@@ -169,7 +170,7 @@ void generateServerResponse(GHashTable* hash, char* msg, char* date, char* html,
         g_strfreev(keyval);
     }
 
-    if (type != HEAD) {
+    if (type != HEAD) { // GET | POST
         g_snprintf(msg+len, MESSAGE_SIZE, "%s%d\n%s\n\n%s\n", 
                 "Content-Length: ", contentLength,
                 "Content-Type: text/html",
@@ -237,7 +238,7 @@ void createInitialLog() {
 }
 
 /*
- * Create the log message for all requests
+ * Create a log message
  */
 void createRequestLog(char* date, char* addr, int port, GHashTable* hash, int resp) {
     char message[LOG_MESSAGE_SIZE];
@@ -250,7 +251,7 @@ void createRequestLog(char* date, char* addr, int port, GHashTable* hash, int re
 }
 
 /*
- * Log the message to the log file 
+ * Log the message to a log file 
  */
 void logToFile(char* message) {
     // open file in appending mode
@@ -264,7 +265,7 @@ void logToFile(char* message) {
 }
 
 /*
- * Check for connections that are past the connection timout
+ * Check for connections that are past the connection timout limit
  */
 void checkConnectionTimeouts(time_t* clientsTimeOuts, size_t ctoSize, fd_set* fdset) {
     for (size_t i = 0; i < ctoSize; i++) {
@@ -281,10 +282,9 @@ void checkConnectionTimeouts(time_t* clientsTimeOuts, size_t ctoSize, fd_set* fd
 }
 
 /*
- * Close the connection
+ * Close a connection
  */
 void closeConnection(time_t* clientsTimeOuts, int connfd, fd_set* fdset) {
-    printf("Shutting down\n");
     shutdown(connfd, SHUT_RDWR);
     close(connfd);
     clientsTimeOuts[connfd] = -1;
@@ -392,6 +392,7 @@ int main(int argc, char *argv[]) {
                 if (!FD_ISSET(i, &tempset)) continue;
                 time(&clientsTimeOuts[i]);
 
+                // receive the message
                 ssize_t n = recv(i, message, sizeof(message)-1, 0);
                 message[n] = '\0';
 
@@ -410,8 +411,9 @@ int main(int argc, char *argv[]) {
                 char* typeOfRequest = g_hash_table_lookup(hash, "request-type");
                 RequestType type = getRequestType(typeOfRequest);
 
-                fprintf(stdout, "Received:\n%s request from %s:%d\n", 
-                        typeOfRequest, addr, clientPort);
+                // print the request to the console
+                // (the request will also be printed to a log file)
+                fprintf(stdout, "%s request from %s:%d\n", typeOfRequest, addr, clientPort);
 
                 // initialize the response message
                 char responseMessage[MESSAGE_SIZE];
@@ -425,7 +427,7 @@ int main(int argc, char *argv[]) {
 
                 if (type == ERROR) {
                     // log the request
-                    createRequestLog(date, addr, port, hash, 400);
+                    createRequestLog(date, addr, port, hash, HTTP_BAD_REQUEST);
 
                     // not implemented
                     int contentLength = generateErrorHTML(html, "400 Bad Request");
