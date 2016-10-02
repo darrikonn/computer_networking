@@ -25,12 +25,12 @@ To make a request to the server, visit the following index page in a web browser
 > localhost:<port>
 
 Other possible urls are:
-> localhost:<port>/color?bg=red   <br/>
-> localhost:<port>/color          <br/>
-> localhost:<port>/test?key=value
+> localhost:<port>/color?bg=red<br/>
+  localhost:<port>/color<br/>
+  localhost:<port>/test?key=value
 
 <br/>
 
 You can also perform POST and HEAD requests any way you like, e.g. with curl:
-> curl -X POST -d "some data" localhost:<port>    <br/>
-> curl -I localhost:<port> 
+> curl -X POST -d "some data" localhost:<port><br/>
+  curl -I localhost:<port> 
