@@ -16,21 +16,21 @@ To build the application, run the following command from the source of the progr
 
 ## Run
 To run the server, run the following command from the source of the program:
-> ./src/httpd <port>
+> ./src/httpd [port]
 
 e.g. ./src/httpd 2000
 
 ## Request from server
 To make a request to the server, visit the following index page in a web browser:
-> localhost:<port>
+> localhost:[port]
 
 Other possible urls are:
-> localhost:<port>/color?bg=red<br/>
-  localhost:<port>/color<br/>
-  localhost:<port>/test?key=value
+> localhost:[port]/color?bg=red<br/>
+  localhost:[port]/color<br/>
+  localhost:[port]/test?key=value
 
 <br/>
 
 You can also perform POST and HEAD requests any way you like, e.g. with curl:
-> curl -X POST -d "some data" localhost:<port><br/>
-  curl -I localhost:<port> 
+> curl -X POST -d "some data" localhost:[port]<br/>
+  curl -I localhost:[port] 
