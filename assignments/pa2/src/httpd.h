@@ -45,7 +45,7 @@ void constructHashTable(GHashTable* hash, char* message);
 int getPostData(char* postData, GHashTable* hash, RequestType type);
 int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port, RequestType type);
 int generateErrorHTML(char* html, char* errorMessage);
-void generateServerResponse(char* message, char* date, char* html, 
+void generateServerResponse(GHashTable* hash, char* message, char* date, char* html, 
         int contentLength, RequestType type);
 void getCurrentDate(char* date);
 void getClientAddr(struct sockaddr_in client, char* addr);

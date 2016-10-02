@@ -47,12 +47,11 @@ int getPostData(char* postData, GHashTable* hash, RequestType type) {
     if (type == POST) {
         char* data = g_hash_table_lookup(hash, "data");
         // prevent XSS
-        if (strstr(data, "<script") ||
-                strstr(data, "<SCRIPT")) return 0;
+        if (data != NULL && (strstr(data, "<script") || strstr(data, "<SCRIPT"))) return 0;
 
         g_snprintf(postData, DATA_SIZE, "%s%s%s",
                 "<h3>Post data:</h3><p>",
-                (char*)g_hash_table_lookup(hash, "data"),
+                data,
                 "</p>");
     }
 
@@ -75,6 +74,8 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
 
     char queryData[QUERY_DATA_SIZE];
     initializeArray(queryData, QUERY_DATA_SIZE);
+
+    char* cookie = g_hash_table_lookup(hash, "cookie");
     
     char body[BODY_SIZE];
     g_stpcpy(body, "<body");
@@ -85,8 +86,6 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
 
         // internal server error
         return generateErrorHTML(html, "500 Internal Server Error");
-    } else if (!g_strcmp0(url, "/")) {
-
     } else if (strstr(url, "?") && strstr(url, "=")) {
         gchar** query = g_strsplit(url, "?", 2);
         gchar** keyval = g_strsplit(query[1], "=", 2);
@@ -95,7 +94,7 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
             g_snprintf(queryData, QUERY_DATA_SIZE, "<p>Key: %s</p><p>Value: %s</p>", 
                     keyval[0],
                     keyval[1]);
-        } else if (g_str_has_prefix(url, "/colour") && !g_strcmp0(keyval[0], "bg")) {
+        } else if (g_str_has_prefix(url, "/color") && !g_strcmp0(keyval[0], "bg")) {
             g_snprintf(body+5, BODY_SIZE, " style=\"background-color: %s\"", keyval[1]);
         } else {
             g_strfreev(query);
@@ -109,9 +108,12 @@ int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port,
 
         g_strfreev(query);
         g_strfreev(keyval);
-    } else if (0) { // check for cookie
-        
-    } else {
+    } else if (cookie != NULL && g_str_has_prefix(url, "/color")) { // check for cookie
+        gchar** keyval = g_strsplit(cookie, "=", 2);
+        g_snprintf(body+5, BODY_SIZE, " style=\"background-%s: %s\"", keyval[0], keyval[1]);
+
+        g_strfreev(keyval);
+    } else if (g_strcmp0(url, "/")) {
         // log the request
         createRequestLog(date, addr, port, hash, 404);
 
@@ -146,7 +148,8 @@ int generateErrorHTML(char* html, char* errorMessage) {
 /*
  * Generate the server response
  */
-void generateServerResponse(char* msg, char* date, char* html, int contentLength, RequestType type) {
+void generateServerResponse(GHashTable* hash, char* msg, char* date, char* html, 
+        int contentLength, RequestType type) {
     int len = g_snprintf(msg, MESSAGE_SIZE, "%s\n%s%s\n%s\n%s%s\n%s\n%s\n", 
             "HTTP/1.1 200 OK",
             "Date: ", date,
@@ -155,8 +158,19 @@ void generateServerResponse(char* msg, char* date, char* html, int contentLength
             "Accept-Ranges: bytes",
             "Vary: Accept-Encoding");
 
+    char* url = g_hash_table_lookup(hash, "url");
+    if (url != NULL && g_str_has_prefix(url, "/color?bg=")) {
+        // insert into the cookie
+        gchar** keyval = g_strsplit(url, "=", 2);
+        len += g_snprintf(msg+len, MESSAGE_SIZE, "Set-Cookie: color=%s; %s\n",
+                keyval[1], 
+                "Expires=Wed, 01 Jan 2021 00:00:00 GMT"); 
+
+        g_strfreev(keyval);
+    }
+
     if (type != HEAD) {
-        msg += g_snprintf(msg+len, MESSAGE_SIZE, "%s%d\n%s\n\n%s", 
+        g_snprintf(msg+len, MESSAGE_SIZE, "%s%d\n%s\n\n%s\n", 
                 "Content-Length: ", contentLength,
                 "Content-Type: text/html",
                 html);
@@ -415,12 +429,12 @@ int main(int argc, char *argv[]) {
 
                     // not implemented
                     int contentLength = generateErrorHTML(html, "400 Bad Request");
-                    generateServerResponse(responseMessage, date, html, contentLength, type);
+                    generateServerResponse(hash, responseMessage, date, html, contentLength, type);
                 } else if (type == HEAD) {
-                    generateServerResponse(responseMessage, date, NULL, 0, type);
+                    generateServerResponse(hash, responseMessage, date, NULL, 0, type);
                 } else { // type = POST | GET
                     int contentLength = generateHTML(hash, html, date, addr, clientPort, type);
-                    generateServerResponse(responseMessage, date, html, contentLength, type);
+                    generateServerResponse(hash, responseMessage, date, html, contentLength, type);
                 }
 
                 // send the message back
