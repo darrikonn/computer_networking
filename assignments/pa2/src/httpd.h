@@ -28,6 +28,8 @@ const size_t DATA_SIZE = 1024;
 const size_t LOG_MESSAGE_SIZE = 300;
 const size_t MAX_CONNECTIONS = 256;
 const size_t CONNECTION_TIME_OUT = 30;
+const size_t BODY_SIZE = 60;
+const size_t QUERY_DATA_SIZE = 100;
 
 /*
  * Enums
@@ -41,7 +43,7 @@ typedef enum {
  */
 void constructHashTable(GHashTable* hash, char* message);
 int getPostData(char* postData, GHashTable* hash, RequestType type);
-int generateHTML(GHashTable* hash, char* html, char* addr, int port, RequestType type);
+int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port, RequestType type);
 int generateErrorHTML(char* html, char* errorMessage);
 void generateServerResponse(char* message, char* date, char* html, 
         int contentLength, RequestType type);

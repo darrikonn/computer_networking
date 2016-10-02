@@ -8,7 +8,7 @@ void constructHashTable(GHashTable* hash, char* message) {
 
     short isData = 0;
     for (int i = 0; header[i] != '\0'; i++) {
-        if (!strcmp(header[i], "")) { // check if header is empty, then the next header is the data
+        if (!g_strcmp0(header[i], "")) { // check if header is empty, then the next header is the data
             isData = 1;
             continue;
         } else if (isData) { // insert the data into the hash table
@@ -62,20 +62,75 @@ int getPostData(char* postData, GHashTable* hash, RequestType type) {
 /*
  * Generate the html
  */
-int generateHTML(GHashTable* hash, char* html, char* addr, int port, RequestType type) {
+int generateHTML(GHashTable* hash, char* html, char* date, char* addr, int port, RequestType type) {
     char postData[DATA_SIZE];
     initializeArray(postData, DATA_SIZE);
     if (!getPostData(postData, hash, type)) {
+        // log the request
+        createRequestLog(date, addr, port, hash, 403);
+
+        // post data contains XSS
         return generateErrorHTML(html, "403 Forbidden");
     }
 
-    return g_snprintf(html, HTML_SIZE, "%s%s%s %s:%d%s%s",
-            "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head><body><p>", 
+    char queryData[QUERY_DATA_SIZE];
+    initializeArray(queryData, QUERY_DATA_SIZE);
+    
+    char body[BODY_SIZE];
+    g_stpcpy(body, "<body");
+    char* url = g_hash_table_lookup(hash, "url");
+    if (url == NULL) {
+        // log the request
+        createRequestLog(date, addr, port, hash, 500);
+
+        // internal server error
+        return generateErrorHTML(html, "500 Internal Server Error");
+    } else if (!g_strcmp0(url, "/")) {
+
+    } else if (strstr(url, "?") && strstr(url, "=")) {
+        gchar** query = g_strsplit(url, "?", 2);
+        gchar** keyval = g_strsplit(query[1], "=", 2);
+        
+        if (g_str_has_prefix(url, "/test")) {
+            g_snprintf(queryData, QUERY_DATA_SIZE, "<p>Key: %s</p><p>Value: %s</p>", 
+                    keyval[0],
+                    keyval[1]);
+        } else if (g_str_has_prefix(url, "/colour") && !g_strcmp0(keyval[0], "bg")) {
+            g_snprintf(body+5, BODY_SIZE, " style=\"background-color: %s\"", keyval[1]);
+        } else {
+            g_strfreev(query);
+            g_strfreev(keyval);
+
+            // log the request
+            createRequestLog(date, addr, port, hash, 404);
+
+            return generateErrorHTML(html, "404 Not Found");
+        }
+
+        g_strfreev(query);
+        g_strfreev(keyval);
+    } else if (0) { // check for cookie
+        
+    } else {
+        // log the request
+        createRequestLog(date, addr, port, hash, 404);
+
+        return generateErrorHTML(html, "404 Not Found");
+    }
+
+    // log the request, either GET or POST
+    createRequestLog(date, addr, port, hash, type == GET ? 200 : 201);
+
+    return g_snprintf(html, HTML_SIZE, "%s%s%s%s%s %s:%d%s%s%s%s",
+            "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>HTTP server</title></head>",
+            body, "><p>", 
             (char*)g_hash_table_lookup(hash, "host"),
-            (char*)g_hash_table_lookup(hash, "url"),
+            url,
             addr, port,
+            "</p>",
             postData,
-            "</p></body></html>");
+            queryData,
+            "</body></html>");
 }
 
 /*
@@ -141,11 +196,11 @@ void initializeArray(char* arr, int size) {
 RequestType getRequestType(char* type) {
     if (type == NULL) {
         return ERROR;
-    } else if (!strcmp(type, "GET")) {
+    } else if (!g_strcmp0(type, "GET")) {
         return GET;
-    } else if (!strcmp(type, "POST")) {
+    } else if (!g_strcmp0(type, "POST")) {
         return POST;
-    } else if (!strcmp(type, "HEAD")) {
+    } else if (!g_strcmp0(type, "HEAD")) {
         return HEAD;
     }
 
@@ -159,8 +214,10 @@ void createInitialLog() {
     char date[DATE_SIZE];
     getCurrentDate(date);
     char message[LOG_MESSAGE_SIZE];
-    g_snprintf(message, LOG_MESSAGE_SIZE, "%s -> Starting to log:\n%s", 
-            date, "=================================================");
+    g_snprintf(message, LOG_MESSAGE_SIZE, "%s\n%s -> Starting to log:\n%s", 
+            "=================================================",
+            date, 
+            "=================================================");
 
     logToFile(message);
 }
@@ -353,25 +410,25 @@ int main(int argc, char *argv[]) {
                 char html[HTML_SIZE];
 
                 if (type == ERROR) {
+                    // log the request
+                    createRequestLog(date, addr, port, hash, 400);
+
                     // not implemented
                     int contentLength = generateErrorHTML(html, "400 Bad Request");
                     generateServerResponse(responseMessage, date, html, contentLength, type);
                 } else if (type == HEAD) {
                     generateServerResponse(responseMessage, date, NULL, 0, type);
                 } else { // type = POST | GET
-                    int contentLength = generateHTML(hash, html, addr, clientPort, type);
+                    int contentLength = generateHTML(hash, html, date, addr, clientPort, type);
                     generateServerResponse(responseMessage, date, html, contentLength, type);
                 }
-
-                // log the request
-                createRequestLog(date, addr, clientPort, hash, 200);
 
                 // send the message back
                 send(i, responseMessage, MESSAGE_SIZE, 0);
 
                 // check for persistant connection
                 char* connection = g_hash_table_lookup(hash, "connection");
-                if (connection == NULL || strcmp(connection, "keep-alive")) {
+                if (connection == NULL || g_strcmp0(connection, "keep-alive")) {
                     // close the connection
                     closeConnection(clientsTimeOuts, i, &fdset);
                 }
