@@ -26,8 +26,8 @@ To make a request to the server, visit the following index page in a web browser
 
 Other possible urls are:
 > localhost:<port>/color?bg=red
-> localhost:<port>/color
-> localhost:<port>/test?key=value
+  localhost:<port>/color
+  localhost:<port>/test?key=value
 
 <br/>
 
