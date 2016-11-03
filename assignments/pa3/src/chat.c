@@ -113,6 +113,11 @@ void readline_callback(char* line) {
     char* chatroom = strdup(&(line[i]));
 
     /* Process and send this information to the server. */
+    SSL_write(server_ssl, line, strlen(line));
+
+    char res[RESPONSE_SIZE];
+    int n = SSL_read(server_ssl, res, RESPONSE_SIZE);
+    write(STDOUT_FILENO, res, n);
 
     /* Maybe update the prompt. */
     free(prompt);
@@ -122,6 +127,12 @@ void readline_callback(char* line) {
   }
   if (strncmp("/list", line, 5) == 0) {
     /* Query all available chat rooms */
+    SSL_write(server_ssl, line, strlen(line));
+
+    char res[RESPONSE_SIZE];
+    int n = SSL_read(server_ssl, res, RESPONSE_SIZE);
+    write(STDOUT_FILENO, res, n);
+
     return;
   }
   if (strncmp("/roll", line, 5) == 0) {

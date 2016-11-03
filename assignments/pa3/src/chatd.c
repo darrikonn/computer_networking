@@ -7,8 +7,9 @@
  */
 #include "chatd.h"
 
-/* This can be used to build instances of GTree that index on
-   the address of a connection. */
+/* 
+ * This can be used to build instances of GTree that index on the address of a connection. 
+ */
 int sockaddr_in_cmp(const void *addr1, const void *addr2) {
   const struct sockaddr_in *_addr1 = addr1;
   const struct sockaddr_in *_addr2 = addr2;
@@ -30,9 +31,9 @@ int sockaddr_in_cmp(const void *addr1, const void *addr2) {
   return 0;
 }
 
-
-/* This can be used to build instances of GTree that index on
-   the file descriptor of a connection. */
+/* 
+ * This can be used to build instances of GTree that index on the file descriptor of a connection. 
+ */
 gint fd_cmp(gconstpointer fd1,  gconstpointer fd2, gpointer G_GNUC_UNUSED data) {
   return GPOINTER_TO_INT(fd1) - GPOINTER_TO_INT(fd2);
 }
@@ -99,6 +100,9 @@ void getClientAddr(struct sockaddr_in client, char* addr) {
     inet_ntop(AF_INET, &(client.sin_addr), addr, INET_ADDRSTRLEN);
 }
 
+/*
+ * Initialize the SSL
+ */
 SSL_CTX* initializeSSL() {
   SSL_library_init();
   // add cryptos and initialize OpenSSL
@@ -134,19 +138,114 @@ SSL_CTX* initializeSSL() {
   return ssl_ctx;
 }
 
-void handleRequests(struct user* user, char* message) {
+/*
+ * Get the names of all the users
+ */
+void getAllUserNamesOfTree(struct sockaddr_in* client, struct user_s* user, char* users) {
+  (void)client;
+  g_snprintf(users+strlen(users), RESPONSE_SIZE, "%s\n", user->username);
+}
+
+/*
+ * Initialize the array with known values, i.e. 0
+ */
+void initializeArray(char* arr, int size) {
+  memset(arr, '\0', size);
+}
+
+/*
+ * Get the names of all the chatrooms
+ */
+void getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
+  (void)tmp;
+  printf("name: %s\n", name);
+  g_snprintf(rooms+strlen(rooms), RESPONSE_SIZE, "%s\n", name);
+}
+
+/*
+ * Join a room
+ */
+int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* res) {
+  // check if it is the users room
+  if (g_strcmp0(user->chatroom, room)) {
+    short created = 0;
+
+    // remove user from current room
+    struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
+    if (chatroom != NULL) {
+      chatroom->list = g_list_remove(chatroom->list, client);
+    }
+
+    // add the user to the new room, create if it doesn't exist
+    chatroom = g_tree_lookup(chatroom_t, room);
+    if (chatroom == NULL) {
+      // create the new room
+      chatroom = g_new0(struct chatroom_s, 1);
+      chatroom->name = g_strdup(room);
+
+      // insert the chatroom to the chatroom tree
+      g_tree_insert(chatroom_t, room, chatroom);
+
+      created = 1;
+    }
+
+    // add the user to the chatroom list
+    chatroom->list = g_list_append(chatroom->list, client);
+
+    // update the users chatroom
+    user->chatroom = chatroom->name;
+
+    return g_snprintf(res, RESPONSE_SIZE, "Joined%s chatroom: %s\n", 
+        created ? " and created" : "", 
+        room);
+  }
+
+  return g_snprintf(res, RESPONSE_SIZE, "Already a member of chatroom: %s\n", room);
+}
+
+/*
+ * Handle the client requests
+ */
+void handleRequests(struct user_s* user, struct sockaddr_in* client, char* message) {
+  char res[RESPONSE_SIZE];
+  initializeArray(res, RESPONSE_SIZE);
   if (g_str_has_prefix(message, "/who")) {
-    SSL_write(user->ssl, "Yo mama!", 8);
+    if (!g_tree_height(user_t)) {
+      g_stpcpy(res, "No users");
+    } else {
+      g_tree_foreach(user_t, (GTraverseFunc)getAllUserNamesOfTree, res);
+    }
+
+    SSL_write(user->ssl, res, sizeof(res));
+  } else if (g_str_has_prefix(message, "/list")) {
+    printf("height: %d\n", g_tree_height(chatroom_t));
+    if (!g_tree_height(chatroom_t)) {
+      g_stpcpy(res, "No rooms");
+    } else {
+      g_tree_foreach(chatroom_t, (GTraverseFunc)getAllNamesOfChatRooms, res);
+    }
+
+    SSL_write(user->ssl, res, sizeof(res));
+  } else if (g_str_has_prefix(message, "/join")) {
+    gchar** tmp = g_strsplit(message, " ", 2);
+
+    int n = joinRoom(user, client, tmp[1], res);
+    SSL_write(user->ssl, res, n);
+    g_strfreev(tmp);
   }
 }
 
-void traverseTree(struct sockaddr_in* client, struct user* user, fd_set* tempset) {
+/*
+ * Traverse the user tree
+ */
+void traverseTree(struct sockaddr_in* client, struct user_s* user, fd_set* tempset) {
+  (void)client;
   if (FD_ISSET(user->fd, tempset)) {
     char message[MESSAGE_SIZE];
     int n = SSL_read(user->ssl, message, MESSAGE_SIZE-1);
     message[n] = '\0';
     printf("%s\n", message);
-    handleRequests(user, message);
+    handleRequests(user, client, message);
   }
 }
 
@@ -200,7 +299,12 @@ int main(int argc, char **argv) {
   FD_ZERO(&fdset);
   FD_SET(sockfd, &fdset);
   struct timeval timeout;
-  GTree* tree = g_tree_new((GCompareFunc)sockaddr_in_cmp);
+  user_t = g_tree_new((GCompareFunc)sockaddr_in_cmp);
+
+  chatroom_t = g_tree_new((GCompareFunc)g_strcmp0);
+  struct chatroom_s* lobby = g_new0(struct chatroom_s, 1);
+  lobby->name = LOBBY;
+  g_tree_insert(chatroom_t, lobby->name, lobby);
   
   createInitialLog();
 
@@ -248,14 +352,17 @@ int main(int argc, char **argv) {
         int clientPort = client.sin_port;
 
         // insert user into the tree
-        struct user* user = g_new0(struct user, 1);
+        struct user_s* user = g_new0(struct user_s, 1);
         user->fd = connfd;
         user->ssl = ssl;
         user->username = NULL;
-        user->chatroom = NULL;
+        user->chatroom = LOBBY;
         user->ip = addr;
         user->port = port;
-        g_tree_insert(tree, (gpointer)&client, (gpointer)user);
+
+        lobby->list = g_list_append(lobby->list, &client);
+
+        g_tree_insert(user_t, &client, user);
 
         // send the message
         if (SSL_write(ssl, WELCOME, sizeof(WELCOME)) == -1) {
@@ -266,7 +373,7 @@ int main(int argc, char **argv) {
         createRequestLog(addr, clientPort, "connected");
       }
 
-      g_tree_foreach(tree, (GTraverseFunc)traverseTree, &tempset);
+      g_tree_foreach(user_t, (GTraverseFunc)traverseTree, &tempset);
     }
 
     // checkconnections

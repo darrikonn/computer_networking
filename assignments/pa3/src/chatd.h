@@ -25,6 +25,7 @@
 #define PRIVATE_KEY "ssl/fd.key"
 #define PASSWD "darri"
 #define WELCOME "Welcome to the chat server!"
+#define LOBBY "lobby"
 
 /*
  * Constant variables
@@ -34,6 +35,13 @@ const size_t LOG_MESSAGE_SIZE = 300;
 const size_t MAX_CONNECTIONS = 256;
 const size_t CONNECTION_TIME_OUT = 30;
 const size_t MESSAGE_SIZE = 1024;
+const size_t RESPONSE_SIZE = 1024;
+
+/*
+ * Static variables
+ */
+GTree* user_t;
+GTree* chatroom_t;
 
 /*
  * Functions
@@ -50,13 +58,20 @@ void closeConnection(time_t*, int, fd_set*);
 /*
  * Structs
  */
-struct user {
+struct user_s {
   int fd;
   SSL* ssl;
   char* username;
   char* chatroom;
   char* ip;
   int port;
+};
+
+// baeta vid fd tree
+
+struct chatroom_s {
+  char* name;
+  GList* list;
 };
 
 #endif  // CHATD_H_

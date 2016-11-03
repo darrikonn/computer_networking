@@ -27,8 +27,8 @@
 /*
  * Constant variables
  */
-const int MESSAGE_SIZE = 1024;
-const int RESPONSE_SIZE = 1024;
+const size_t MESSAGE_SIZE = 1024;
+const size_t RESPONSE_SIZE = 1024;
 
 /*
  * Static variables
