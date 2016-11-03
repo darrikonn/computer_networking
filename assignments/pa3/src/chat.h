@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <openssl/ssl.h> // Secure socket layer headers
 #include <openssl/err.h>
+#include <openssl/sha.h>
 #include <readline/readline.h> // For nicer interaction, we use the GNU readline library.
 #include <readline/history.h>
 #include <netdb.h>  // used for gethostbyname
@@ -27,8 +28,14 @@
 /*
  * Constant variables
  */
+const size_t USERNAME_SIZE = 50;
 const size_t MESSAGE_SIZE = 1024;
 const size_t RESPONSE_SIZE = 1024;
+const size_t PASSWORD_SIZE = 48;
+const size_t HASH_STRING_SIZE = 78;
+const size_t SALT_SIZE = 21;
+const int MAX_TRIES = 3;
+const int HASH_ITERATIONS = 100000;
 
 /*
  * Static variables

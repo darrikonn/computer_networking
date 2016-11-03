@@ -204,6 +204,28 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
 }
 
 /*
+ * Generate the salt
+ */
+void createSalt(char* salt) {
+  /*
+  for (size_t i = 0; i < SALT_SIZE; i++) {
+    salt[i] = CHARSET[rand() % (int)(sizeof CHARSET-1)];
+  }
+  salt[SALT_SIZE] = '\0';
+  */
+  FILE *fd;
+
+  // Setup the pipe for reading and execute the command.
+  fd = popen("cat /dev/urandom | base64 | head -c 20","r"); 
+
+  // Get the data from the fd
+  fgets(salt, 20 , fd);
+
+  if (pclose(fd) != 0)
+    fprintf(stderr," Error: Failed to close command stream \n");
+}
+
+/*
  * Handle the client requests
  */
 void handleRequests(struct user_s* user, struct sockaddr_in* client, char* message) {
@@ -232,6 +254,52 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
     int n = joinRoom(user, client, tmp[1], res);
     SSL_write(user->ssl, res, n);
     g_strfreev(tmp);
+  } else if (g_str_has_prefix(message, "/user")) {
+    gchar** tmp = g_strsplit(message, " ", 2);
+    // get salt and password from keyfile
+    char* salt_db = g_key_file_get_string(keyfile, "salts", tmp[1], NULL);
+    char* passwd_db = g_key_file_get_string(keyfile, "passwords", tmp[1], NULL);
+    if (salt_db == NULL) {
+      char salt[SALT_SIZE];
+      initializeArray(salt, SALT_SIZE);
+      createSalt(salt);
+
+      g_key_file_set_string(keyfile, "salts", tmp[1], salt);
+      salt_db = g_key_file_get_string(keyfile, "salts", tmp[1], NULL);
+    }
+    SSL_write(user->ssl, salt_db, strlen(salt_db));
+
+    char passwd[PASSWORD_SIZE];
+    initializeArray(passwd, PASSWORD_SIZE);
+
+    int n = SSL_read(user->ssl, passwd, PASSWORD_SIZE-1);
+    passwd[n] = '\0';
+
+    if (passwd_db == NULL) {
+      g_key_file_set_string(keyfile, "passwords", tmp[1], passwd);
+      SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
+      user->username = tmp[1];
+
+      createRequestLog(user->ip, user->port, "authenticated");
+    } else {
+      printf("%s\n", passwd);
+      printf("%s\n", passwd_db);
+      if (!g_strcmp0(passwd, passwd_db)) {
+        SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
+        user->username = strdup(tmp[1]);
+
+        createRequestLog(user->ip, user->port, "authenticated");
+      } else {
+        SSL_write(user->ssl, NOT_AUTHENTICATED, sizeof(NOT_AUTHENTICATED));
+        createRequestLog(user->ip, user->port, "authentication error");
+      }
+    }
+
+    g_key_file_save_to_file(keyfile, "keyfile.ini", NULL);
+      
+    g_strfreev(tmp);
+    g_free(passwd_db);
+    g_free(salt_db);
   }
 }
 
@@ -306,6 +374,10 @@ int main(int argc, char **argv) {
   lobby->name = LOBBY;
   g_tree_insert(chatroom_t, lobby->name, lobby);
   
+  // load from keyfile
+  keyfile = g_key_file_new();
+  g_key_file_load_from_file(keyfile, "keyfile.ini", G_KEY_FILE_NONE, NULL);
+
   createInitialLog();
 
   for (;;) {
@@ -379,6 +451,7 @@ int main(int argc, char **argv) {
     // checkconnections
   }
 
+  g_key_file_free(keyfile);
   close(sockfd);
   SSL_CTX_free(ssl_ctx);
 

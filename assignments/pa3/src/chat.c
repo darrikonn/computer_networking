@@ -20,6 +20,9 @@ void signal_handler(int signum) {
   errno = _errno;
 }
 
+/*
+ * Initialize exit file descriptor
+ */
 static void initialize_exitfd(void) {
   /* Establish the self pipe for signal handling. */
   if (pipe(exitfd) == -1) {
@@ -66,6 +69,95 @@ static void initialize_exitfd(void) {
   }       
 }
 
+/*
+ * Initialize the array with known values, i.e. 0
+ */
+void initializeArray(char* arr, int size) {
+  memset(arr, '\0', size);
+}
+
+/*
+ * Hash the password
+ */
+void hashPassword(unsigned char* hash, char* salt, char* passwd) {
+  char hashString[HASH_STRING_SIZE];
+  initializeArray(hashString, HASH_STRING_SIZE);
+  strcpy(hashString, passwd);
+  strcat(hashString, salt);
+
+  for (int i = 0; i < HASH_ITERATIONS; i++) {
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, (unsigned char*)hashString, strlen(hashString));
+    SHA256_Final(hash, &context);
+  }
+}
+
+/*
+ * Authenticate the user
+ */
+void authenticate(char* new_user) {
+  if (new_user == NULL || !g_strcmp0(new_user, "")) {
+    printf("Invalid username\n");
+    printLogIn();
+    return;
+  }
+
+  char buffer[256]; // need to reuse the buffer
+  /* Process and send this information to the server. */
+  for (int i = 0; i < MAX_TRIES; i++) {
+    char salt[SALT_SIZE], passwd[PASSWORD_SIZE];
+    initializeArray(salt, SALT_SIZE);
+    initializeArray(passwd, PASSWORD_SIZE);
+
+    strcpy(buffer, "/user ");
+    strncat(buffer, new_user, strlen(new_user));
+    SSL_write(server_ssl, buffer, strlen(buffer));
+
+    int n = SSL_read(server_ssl, salt, SALT_SIZE-1);
+    salt[n] = '\0';
+
+    getpasswd("Password: ", passwd, (int)PASSWORD_SIZE);
+
+   
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    initializeArray(hash, SHA256_DIGEST_LENGTH);
+    hashPassword(hash, salt, passwd);
+    char* hash64 = g_base64_encode(hash, strlen((char*)hash));
+    SSL_write(server_ssl, hash64, strlen(hash64));
+    g_free(hash64);
+
+    n = SSL_read(server_ssl, buffer, RESPONSE_SIZE);
+    buffer[n] = '\0';
+
+    if (!g_strcmp0(buffer, "1")) {
+      printf("Welcome %s\n", new_user);
+      user = new_user;
+
+      free(prompt);
+      prompt = strdup("> "); /* What should the new prompt look like? */
+      rl_set_prompt(prompt);
+      break;
+    } else if (!g_strcmp0(buffer, "0")) {
+      printf("Username or password incorrect!\n");
+    }
+
+    if (i == 2) {
+      printf("Too many attempts!\n");
+      printLogIn();
+    }
+  }
+}
+
+/*
+ * Print log in message
+ */
+void printLogIn() {
+  write(STDOUT_FILENO, "\nPlease, log in\nusername: ", 26);
+  fsync(STDOUT_FILENO);
+  rl_redisplay();
+}
+
 /* When a line is entered using the readline library, this function
    gets called to handle the entered line. Implement the code to
    handle the user requests in this function. The client handles the
@@ -79,6 +171,10 @@ void readline_callback(char* line) {
   }
   if (strlen(line) > 0) {
     add_history(line);
+  }
+  if (user == NULL) {
+    authenticate(line);
+    return;
   }
   if ((strncmp("/bye", line, 4) == 0) ||
       (strncmp("/quit", line, 5) == 0)) {
@@ -121,7 +217,7 @@ void readline_callback(char* line) {
 
     /* Maybe update the prompt. */
     free(prompt);
-    prompt = NULL; /* What should the new prompt look like? */
+    prompt = strdup("> "); /* What should the new prompt look like? */
     rl_set_prompt(prompt);
     return;
   }
@@ -177,15 +273,12 @@ void readline_callback(char* line) {
       rl_redisplay();
       return;
     }
-    char *new_user = strdup(&(line[i]));
-    char passwd[48];
-    getpasswd("Password: ", passwd, 48);
-
-    /* Process and send this information to the server. */
+    char* new_user = strdup(&(line[i]));
+    authenticate(new_user);
 
     /* Maybe update the prompt. */
     free(prompt);
-    prompt = NULL; /* What should the new prompt look like? */
+    prompt = strdup("> "); /* What should the new prompt look like? */
     rl_set_prompt(prompt);
     return;
   }
@@ -280,7 +373,7 @@ int main(int argc, char **argv) {
   }
 
   // read characters from the keyboard while waiting for input.
-  prompt = strdup("> ");
+  //prompt = strdup("> ");
   rl_callback_handler_install(prompt, (rl_vcpfunc_t*) &readline_callback);
   for (;;) {
     fd_set rfds;
@@ -313,11 +406,13 @@ int main(int argc, char **argv) {
       break;
     }
     if (r == 0) {
+      /*
       write(STDOUT_FILENO, "No message?\n", 12);
       fsync(STDOUT_FILENO);
+      */
       /* Whenever you print out a message, call this
          to reprint the current input line. */
-      rl_redisplay();
+      /*rl_redisplay();*/
       continue;
     }
     if (FD_ISSET(exitfd[0], &rfds)) {
@@ -349,6 +444,7 @@ int main(int argc, char **argv) {
       int n = SSL_read(server_ssl, message, sizeof(message)-1);
       message[n] = '\0';
       printf("\"%s\"\n", message);
+      printLogIn();
     }
   }
 

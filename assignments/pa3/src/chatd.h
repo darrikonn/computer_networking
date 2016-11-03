@@ -26,6 +26,8 @@
 #define PASSWD "darri"
 #define WELCOME "Welcome to the chat server!"
 #define LOBBY "lobby"
+#define AUTHENTICATED "1"
+#define NOT_AUTHENTICATED "0"
 
 /*
  * Constant variables
@@ -36,12 +38,16 @@ const size_t MAX_CONNECTIONS = 256;
 const size_t CONNECTION_TIME_OUT = 30;
 const size_t MESSAGE_SIZE = 1024;
 const size_t RESPONSE_SIZE = 1024;
+const size_t PASSWORD_SIZE = 48;
+const size_t SALT_SIZE = 21;
+const char CHARSET[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK...";
 
 /*
  * Static variables
  */
-GTree* user_t;
-GTree* chatroom_t;
+static GTree* user_t;
+static GTree* chatroom_t;
+static GKeyFile* keyfile;
 
 /*
  * Functions
