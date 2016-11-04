@@ -95,9 +95,9 @@ void logToFile(char* message) {
 /*
  * Get the address of the client
  */
-void getClientAddr(struct sockaddr_in client, char* addr) {
+void getClientAddr(struct sockaddr_in* client, char* addr) {
     // get the ip address of the client on human readable form
-    inet_ntop(AF_INET, &(client.sin_addr), addr, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(client->sin_addr), addr, INET_ADDRSTRLEN);
 }
 
 /*
@@ -168,7 +168,7 @@ void getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
 int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* res) {
   // check if it is the users room
   if (g_strcmp0(user->chatroom, room)) {
-    short created = 0;
+    bool created = FALSE;
 
     // remove user from current room
     struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
@@ -186,7 +186,7 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
       // insert the chatroom to the chatroom tree
       g_tree_insert(chatroom_t, room, chatroom);
 
-      created = 1;
+      created = TRUE;
     }
 
     // add the user to the chatroom list
@@ -207,22 +207,22 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
  * Generate the salt
  */
 void createSalt(char* salt) {
-  /*
   for (size_t i = 0; i < SALT_SIZE; i++) {
     salt[i] = CHARSET[rand() % (int)(sizeof CHARSET-1)];
   }
   salt[SALT_SIZE] = '\0';
-  */
-  FILE *fd;
+}
 
-  // Setup the pipe for reading and execute the command.
-  fd = popen("cat /dev/urandom | base64 | head -c 20","r"); 
+/*
+ * Get user by username
+ */
+bool getUserByName(struct sockaddr_in* client, struct user_s* user, struct query_s* query) {
+  if (!g_strcmp0(user->username, query->name)) {
+    query->client = client;
+    return TRUE;
+  }
 
-  // Get the data from the fd
-  fgets(salt, 20 , fd);
-
-  if (pclose(fd) != 0)
-    fprintf(stderr," Error: Failed to close command stream \n");
+  return FALSE;
 }
 
 /*
@@ -240,7 +240,6 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
 
     SSL_write(user->ssl, res, sizeof(res));
   } else if (g_str_has_prefix(message, "/list")) {
-    printf("height: %d\n", g_tree_height(chatroom_t));
     if (!g_tree_height(chatroom_t)) {
       g_stpcpy(res, "No rooms");
     } else {
@@ -279,14 +278,14 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
       g_key_file_set_string(keyfile, "passwords", tmp[1], passwd);
       SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
       user->username = tmp[1];
+      user->chatroom = LOBBY;
 
       createRequestLog(user->ip, user->port, "authenticated");
     } else {
-      printf("%s\n", passwd);
-      printf("%s\n", passwd_db);
       if (!g_strcmp0(passwd, passwd_db)) {
         SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
         user->username = strdup(tmp[1]);
+        user->chatroom = LOBBY;
 
         createRequestLog(user->ip, user->port, "authenticated");
       } else {
@@ -300,25 +299,83 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
     g_strfreev(tmp);
     g_free(passwd_db);
     g_free(salt_db);
+  } else if (g_str_has_prefix(message, "/say")) {
+    gchar** tmp = g_strsplit(message, " ", 3);
+
+    struct query_s* query = g_new0(struct query_s, 1);
+    query->name = tmp[1];
+
+    g_tree_foreach(user_t, (GTraverseFunc)getUserByName, query);
+    if (query->client == NULL) {
+      int n = g_snprintf(res, RESPONSE_SIZE, "No user with username `%s`", tmp[1]);
+      SSL_write(user->ssl, res, n);
+    } else {
+      struct user_s* receiver = g_tree_lookup(user_t, query->client);
+      int n = g_snprintf(res, RESPONSE_SIZE, "%s : %s\n", query->name, tmp[2]);
+      SSL_write(receiver->ssl, res, n);
+      SSL_write(user->ssl, "Message sent!", 13);
+    }
+
+    g_free(query->name);
+    g_free(query->client);
+    g_free(query);
+    g_strfreev(tmp);
   }
 }
 
 /*
- * Traverse the user tree
+ * Remove connections
  */
-void traverseTree(struct sockaddr_in* client, struct user_s* user, fd_set* tempset) {
-  (void)client;
-  if (FD_ISSET(user->fd, tempset)) {
+void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
+  struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
+
+  createRequestLog(user->ip, user->port, "disconnected");
+
+  SSL_free(user->ssl);
+  shutdown(user->fd, SHUT_RDWR);
+  close(user->fd);
+  FD_CLR(user->fd, fdset);
+
+
+  chatroom->list = g_list_remove(chatroom->list, client);
+
+  g_tree_remove(user_t, &client);
+
+  g_timer_destroy(user->timer);
+  g_free(user->username);
+  g_free(user);
+  g_free(client);
+}
+
+/*
+ * Check for inactivity
+ */
+void checkConnections(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
+  if (g_timer_elapsed(user->timer, NULL) > MAX_INACTIVITY) {
+    removeConnection(client, user, fdset);
+  }
+}
+
+/*
+ * Traverse the file descriptor tree
+ */
+void traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, struct fdsets_s* fdsets) {
+  if (FD_ISSET(user->fd, fdsets->tempset)) {
     char message[MESSAGE_SIZE];
     int n = SSL_read(user->ssl, message, MESSAGE_SIZE-1);
-    message[n] = '\0';
-    printf("%s\n", message);
-    handleRequests(user, client, message);
+    if (n > 0) {
+      message[n] = '\0';
+      printf("%s\n", message);
+      handleRequests(user, client, message);
+    } else {
+      // client disconnected
+      removeConnection(client, user, fdsets->fdset);
+    }
   }
 }
 
 int main(int argc, char **argv) {
-  struct sockaddr_in server, client;
+  struct sockaddr_in server;
 
   if (argc != 2) {
     fprintf(stderr, "Usage: %s <port>\n", argv[0]);
@@ -367,13 +424,14 @@ int main(int argc, char **argv) {
   FD_ZERO(&fdset);
   FD_SET(sockfd, &fdset);
   struct timeval timeout;
+
   user_t = g_tree_new((GCompareFunc)sockaddr_in_cmp);
 
   chatroom_t = g_tree_new((GCompareFunc)g_strcmp0);
   struct chatroom_s* lobby = g_new0(struct chatroom_s, 1);
   lobby->name = LOBBY;
   g_tree_insert(chatroom_t, lobby->name, lobby);
-  
+
   // load from keyfile
   keyfile = g_key_file_new();
   g_key_file_load_from_file(keyfile, "keyfile.ini", G_KEY_FILE_NONE, NULL);
@@ -398,9 +456,10 @@ int main(int argc, char **argv) {
       if (FD_ISSET(sockfd, &tempset)) {
         // accept a tcp connection.
         // connfd is a fresh handle dedicated to this connection.
+        struct sockaddr_in* client = g_new0(struct sockaddr_in, 1);
         socklen_t len = sizeof(client);
         int connfd;
-        if ((connfd = accept(sockfd, (struct sockaddr*) &client, &len)) < 0) {
+        if ((connfd = accept(sockfd, (struct sockaddr*) client, &len)) < 0) {
           perror("accept()");
           exit(EXIT_FAILURE);
         }
@@ -421,20 +480,19 @@ int main(int argc, char **argv) {
 
         char addr[INET_ADDRSTRLEN];
         getClientAddr(client, addr);
-        int clientPort = client.sin_port;
+        int clientPort = client->sin_port;
 
         // insert user into the tree
         struct user_s* user = g_new0(struct user_s, 1);
-        user->fd = connfd;
         user->ssl = ssl;
-        user->username = NULL;
-        user->chatroom = LOBBY;
         user->ip = addr;
         user->port = port;
+        user->fd = connfd;
+        user->timer = g_timer_new();
+        g_tree_insert(user_t, client, user);
 
+        // insert the user into the lobby
         lobby->list = g_list_append(lobby->list, &client);
-
-        g_tree_insert(user_t, &client, user);
 
         // send the message
         if (SSL_write(ssl, WELCOME, sizeof(WELCOME)) == -1) {
@@ -445,10 +503,14 @@ int main(int argc, char **argv) {
         createRequestLog(addr, clientPort, "connected");
       }
 
-      g_tree_foreach(user_t, (GTraverseFunc)traverseTree, &tempset);
+      struct fdsets_s* fdsets = g_new0(struct fdsets_s, 1);
+      fdsets->fdset = &fdset;
+      fdsets->tempset = &tempset;
+      g_tree_foreach(user_t, (GTraverseFunc)traverseFileDescriptors, fdsets);
+      g_free(fdsets);
     }
 
-    // checkconnections
+    g_tree_foreach(user_t, (GTraverseFunc)checkConnections, &fdset);
   }
 
   g_key_file_free(keyfile);

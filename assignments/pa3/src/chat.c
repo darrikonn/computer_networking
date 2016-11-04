@@ -118,10 +118,8 @@ void authenticate(char* new_user) {
     salt[n] = '\0';
 
     getpasswd("Password: ", passwd, (int)PASSWORD_SIZE);
-
    
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    initializeArray(hash, SHA256_DIGEST_LENGTH);
     hashPassword(hash, salt, passwd);
     char* hash64 = g_base64_encode(hash, strlen((char*)hash));
     SSL_write(server_ssl, hash64, strlen(hash64));
@@ -133,6 +131,7 @@ void authenticate(char* new_user) {
     if (!g_strcmp0(buffer, "1")) {
       printf("Welcome %s\n", new_user);
       user = new_user;
+      chatroom = LOBBY;
 
       free(prompt);
       prompt = strdup("> "); /* What should the new prompt look like? */
@@ -206,7 +205,7 @@ void readline_callback(char* line) {
       rl_redisplay();
       return;
     }
-    char* chatroom = strdup(&(line[i]));
+    char* room = strdup(&(line[i]));
 
     /* Process and send this information to the server. */
     SSL_write(server_ssl, line, strlen(line));
@@ -214,6 +213,7 @@ void readline_callback(char* line) {
     char res[RESPONSE_SIZE];
     int n = SSL_read(server_ssl, res, RESPONSE_SIZE);
     write(STDOUT_FILENO, res, n);
+    chatroom = room;
 
     /* Maybe update the prompt. */
     free(prompt);
@@ -256,10 +256,16 @@ void readline_callback(char* line) {
       rl_redisplay();
       return;
     }
-    char *receiver = strndup(&(line[i]), j - i - 1);
+    /*char *receiver = strndup(&(line[i]), j - i - 1);
     char *message = strndup(&(line[j]), j - i - 1);
+    */
 
     /* Send private message to receiver. */
+    SSL_write(server_ssl, line, strlen(line));
+
+    char res[RESPONSE_SIZE];
+    int n = SSL_read(server_ssl, res, RESPONSE_SIZE);
+    write(STDOUT_FILENO, res, n);
 
     return;
   }
@@ -442,9 +448,16 @@ int main(int argc, char **argv) {
       /* Handle messages from the server here! */
       char message[MESSAGE_SIZE];
       int n = SSL_read(server_ssl, message, sizeof(message)-1);
-      message[n] = '\0';
-      printf("\"%s\"\n", message);
-      printLogIn();
+      if (n > 0) {
+        message[n] = '\0';
+        printf("\"%s\"\n", message);
+        printLogIn();
+      } else {
+        write(STDOUT_FILENO, "\nInactive for too long!\n", 23);
+        fsync(STDOUT_FILENO);
+        rl_redisplay();
+        break;
+      }
     }
   }
 

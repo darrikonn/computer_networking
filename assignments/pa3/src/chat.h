@@ -24,6 +24,13 @@
 #include <readline/readline.h> // For nicer interaction, we use the GNU readline library.
 #include <readline/history.h>
 #include <netdb.h>  // used for gethostbyname
+#include "getpasswd.h"
+#include <glib.h>
+
+/*
+ * Macros
+ */
+#define LOBBY "lobby"
 
 /*
  * Constant variables
@@ -67,6 +74,10 @@ static char* prompt;
  */
 void signal_handler(int);
 static void initialize_exitfd();
+void initializeArray(char*, int);
+void hashPassword(unsigned char*, char*, char*);
+void authenticate(char*);
+void printLogIn();
 void readline_callback(char*);
 
 #endif  // CHAT_H_

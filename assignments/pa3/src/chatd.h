@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <glib.h>
+#include <stdbool.h>
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
@@ -33,13 +34,14 @@
  * Constant variables
  */
 const size_t DATE_SIZE = 60;
+const size_t MAX_INACTIVITY = 60;
 const size_t LOG_MESSAGE_SIZE = 300;
 const size_t MAX_CONNECTIONS = 256;
 const size_t CONNECTION_TIME_OUT = 30;
 const size_t MESSAGE_SIZE = 1024;
 const size_t RESPONSE_SIZE = 1024;
 const size_t PASSWORD_SIZE = 48;
-const size_t SALT_SIZE = 21;
+const size_t SALT_SIZE = 20;
 const char CHARSET[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK...";
 
 /*
@@ -50,34 +52,53 @@ static GTree* chatroom_t;
 static GKeyFile* keyfile;
 
 /*
- * Functions
- */
-int sockaddr_in_cmp(const void*, const void*);
-gint fd_cmp(gconstpointer,  gconstpointer, gpointer G_GNUC_UNUSED);
-void getCurrentDate(char*);
-void createInitialLog();
-void logToFile(char*);
-SSL_CTX* initializeSSL();
-void checkConnectionTimeouts(time_t*, size_t, fd_set*);
-void closeConnection(time_t*, int, fd_set*);
-
-/*
  * Structs
  */
 struct user_s {
   int fd;
   SSL* ssl;
+  GTimer* timer;
   char* username;
   char* chatroom;
   char* ip;
   int port;
 };
 
-// baeta vid fd tree
-
 struct chatroom_s {
   char* name;
   GList* list;
 };
+
+struct query_s {
+  char* name;
+  struct sockaddr_in* client;
+};
+
+struct fdsets_s {
+  fd_set* tempset;
+  fd_set* fdset;
+};
+
+/*
+ * Functions
+ */
+int sockaddr_in_cmp(const void*, const void*);
+gint fd_cmp(gconstpointer,  gconstpointer, gpointer G_GNUC_UNUSED);
+void getCurrentDate(char*);
+void createRequestLog(char*, int, char*);
+void createInitialLog();
+void logToFile(char*);
+void getClientAddr(struct sockaddr_in*, char*);
+SSL_CTX* initializeSSL();
+void getAllUserNamesOfTree(struct sockaddr_in*, struct user_s*, char*);
+void initializeArray(char*, int);
+void getAllNamesOfChatRooms(char*, gpointer, char*);
+int joinRoom(struct user_s*, struct sockaddr_in*, char*, char*);
+void createSalt(char*);
+bool getUserByName(struct sockaddr_in*, struct user_s*, struct query_s*);
+void handleRequests(struct user_s*, struct sockaddr_in*, char*);
+void removeConnection(struct sockaddr_in*, struct user_s*, fd_set*);
+void checkConnections(struct sockaddr_in*, struct user_s*, fd_set*);
+void traverseFileDescriptors(struct sockaddr_in*, struct user_s*, struct fdsets_s*);
 
 #endif  // CHATD_H_

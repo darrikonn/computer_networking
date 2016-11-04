@@ -3,11 +3,7 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <termios.h>
-#include <unistd.h>
+#include "getpasswd.h"
 
 /* To read a password without echoing it to the console.
  *
@@ -21,7 +17,7 @@
  * C library). To restore echoing, type 'reset' into the sell and
  * press enter.
  */
-void getpasswd(const char *prompt, char *passwd, size_t size) {
+void getpasswd(const char* prompt, char* passwd, size_t size) {
   struct termios old_flags, new_flags;
 
   /* Clear out the buffer content. */
