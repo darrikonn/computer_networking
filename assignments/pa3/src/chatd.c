@@ -141,9 +141,10 @@ SSL_CTX* initializeSSL() {
 /*
  * Get the names of all the users
  */
-void getAllUserNamesOfTree(struct sockaddr_in* client, struct user_s* user, char* users) {
+bool getAllUserNamesOfTree(struct sockaddr_in* client, struct user_s* user, char* users) {
   (void)client;
   g_snprintf(users+strlen(users), RESPONSE_SIZE, "%s\n", user->username);
+  return FALSE;
 }
 
 /*
@@ -156,10 +157,11 @@ void initializeArray(char* arr, int size) {
 /*
  * Get the names of all the chatrooms
  */
-void getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
+bool getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
   (void)tmp;
   printf("name: %s\n", name);
   g_snprintf(rooms+strlen(rooms), RESPONSE_SIZE, "%s\n", name);
+  return FALSE;
 }
 
 /*
@@ -181,10 +183,10 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
     if (chatroom == NULL) {
       // create the new room
       chatroom = g_new0(struct chatroom_s, 1);
-      chatroom->name = g_strdup(room);
+      chatroom->list = NULL;
 
       // insert the chatroom to the chatroom tree
-      g_tree_insert(chatroom_t, room, chatroom);
+      g_tree_insert(chatroom_t, g_strdup(room), chatroom);
 
       created = TRUE;
     }
@@ -193,7 +195,7 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
     chatroom->list = g_list_append(chatroom->list, client);
 
     // update the users chatroom
-    user->chatroom = chatroom->name;
+    user->chatroom = g_strdup(room);
 
     return g_snprintf(res, RESPONSE_SIZE, "Joined%s chatroom: %s\n", 
         created ? " and created" : "", 
@@ -231,6 +233,7 @@ bool getUserByName(struct sockaddr_in* client, struct user_s* user, struct query
 void handleRequests(struct user_s* user, struct sockaddr_in* client, char* message) {
   char res[RESPONSE_SIZE];
   initializeArray(res, RESPONSE_SIZE);
+  g_timer_start(user->timer); // reset the timer of the user
   if (g_str_has_prefix(message, "/who")) {
     if (!g_tree_height(user_t)) {
       g_stpcpy(res, "No users");
@@ -350,16 +353,17 @@ void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* f
 /*
  * Check for inactivity
  */
-void checkConnections(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
+bool checkConnections(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
   if (g_timer_elapsed(user->timer, NULL) > MAX_INACTIVITY) {
     removeConnection(client, user, fdset);
   }
+  return FALSE;
 }
 
 /*
  * Traverse the file descriptor tree
  */
-void traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, struct fdsets_s* fdsets) {
+bool traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, struct fdsets_s* fdsets) {
   if (FD_ISSET(user->fd, fdsets->tempset)) {
     char message[MESSAGE_SIZE];
     int n = SSL_read(user->ssl, message, MESSAGE_SIZE-1);
@@ -372,6 +376,7 @@ void traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, st
       removeConnection(client, user, fdsets->fdset);
     }
   }
+  return FALSE;
 }
 
 int main(int argc, char **argv) {
@@ -429,8 +434,8 @@ int main(int argc, char **argv) {
 
   chatroom_t = g_tree_new((GCompareFunc)g_strcmp0);
   struct chatroom_s* lobby = g_new0(struct chatroom_s, 1);
-  lobby->name = LOBBY;
-  g_tree_insert(chatroom_t, lobby->name, lobby);
+  lobby->list = NULL;
+  g_tree_insert(chatroom_t, LOBBY, lobby);
 
   // load from keyfile
   keyfile = g_key_file_new();

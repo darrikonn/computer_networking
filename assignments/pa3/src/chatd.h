@@ -65,7 +65,6 @@ struct user_s {
 };
 
 struct chatroom_s {
-  char* name;
   GList* list;
 };
 
@@ -90,15 +89,15 @@ void createInitialLog();
 void logToFile(char*);
 void getClientAddr(struct sockaddr_in*, char*);
 SSL_CTX* initializeSSL();
-void getAllUserNamesOfTree(struct sockaddr_in*, struct user_s*, char*);
+bool getAllUserNamesOfTree(struct sockaddr_in*, struct user_s*, char*);
 void initializeArray(char*, int);
-void getAllNamesOfChatRooms(char*, gpointer, char*);
+bool getAllNamesOfChatRooms(char*, gpointer, char*);
 int joinRoom(struct user_s*, struct sockaddr_in*, char*, char*);
 void createSalt(char*);
 bool getUserByName(struct sockaddr_in*, struct user_s*, struct query_s*);
 void handleRequests(struct user_s*, struct sockaddr_in*, char*);
 void removeConnection(struct sockaddr_in*, struct user_s*, fd_set*);
-void checkConnections(struct sockaddr_in*, struct user_s*, fd_set*);
-void traverseFileDescriptors(struct sockaddr_in*, struct user_s*, struct fdsets_s*);
+bool checkConnections(struct sockaddr_in*, struct user_s*, fd_set*);
+bool traverseFileDescriptors(struct sockaddr_in*, struct user_s*, struct fdsets_s*);
 
 #endif  // CHATD_H_

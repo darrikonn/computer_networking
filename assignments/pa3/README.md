@@ -13,7 +13,7 @@ To start the client, run the following:
 > ./src/chat [hostname] [port]
 
 ## Implementation
-When a client has established a secure encrypted connection, a `Welcome` message is displayed. The secure connection is established with TCP and OpenSSL.<br/>
+When a client has established a secure encrypted connection, a `Welcome to the chat server!` message is displayed. The secure connection is established with TCP and OpenSSL.<br/>
 
 After the connection, the client is asked for his/her username and password. The user gets three tries to enter the correct password, else s/he will need to enter the username again.<br/>
 
@@ -38,9 +38,9 @@ User will issue the server the aforementioned command.<br/>
   PARAMETERS:<br/>
     none<br/>
   RETURN:<br/>
-    bla<br/>
+    none<br/>
   DESCRIPTION:<br/>
-    l
+    This command will clean up and close the connection on the server.
 
 -------------------------------------;
 
@@ -75,7 +75,9 @@ User will issue the server the aforementioned command.<br/>
   PARAMETERS:<br/>
     name: the name of chatroom<br/>
   RETURN:<br/>
-    you have joined [chatroom]<br/>
+    joined and created chatroom: [chatroom]<br/>
+    joined chatroom: [chatroom]<br/>
+    Already a member of chatroom: [chatroom]<br/>
   DESCRIPTION:<br/>
     This command will join the client to the desired chatroom, if it's available
 
@@ -87,7 +89,7 @@ User will issue the server the aforementioned command.<br/>
   PARAMETERS:<br/>
     username: the name of the client<br/>
   RETURN:<br/>
-    Success<br/>
+    Welcome [username]<br/>
   DESCRIPTION:<br/>
     This command will authenticate him/herself to the server. The server responds with the salt of the client. The client enters a password that is hashed 100.000x with SHA256. The hash is sent over to the server and is validated there to be correct or not. If it's accepted, then the server responds with `1`, else `0`.
 
