@@ -34,36 +34,36 @@ A client can only be a member of one chatroom at a time. A subsequent join will 
 ## Protocol
 > /bye
 
-User will issue the server the aforementioned command.
-  PARAMETERS:
-    none
-  RETURN:
-    bla
-  DESCRIPTION:
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    none<br/>
+  RETURN:<br/>
+    bla<br/>
+  DESCRIPTION:<br/>
     l
 
 -------------------------------------;
 
 > /who
 
-User will issue the server the aforementioned command.
-  PARAMETERS:
-    none
-  RETURN:
-    list of all users
-  DESCRIPTION:
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    none<br/>
+  RETURN:<br/>
+    list of all users<br/>
+  DESCRIPTION:<br/>
     This command will list the names of all users that are available/authenticated on the system.
 
 -------------------------------------;
 
 > /list
 
-User will issue the server the aforementioned command.
-  PARAMETERS:
-    none
-  RETURN:
-    list of all chatrooms
-  DESCRIPTION:
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    none<br/>
+  RETURN:<br/>
+    list of all chatrooms<br/>
+  DESCRIPTION:<br/>
     This command will list the names of all available public chat rooms.
 
 
@@ -71,24 +71,24 @@ User will issue the server the aforementioned command.
 
 > /join [name]
 
-User will issue the server the aforementioned command.
-  PARAMETERS:
-    name: the name of chatroom
-  RETURN:
-    you have joined [chatroom]
-  DESCRIPTION:
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    name: the name of chatroom<br/>
+  RETURN:<br/>
+    you have joined [chatroom]<br/>
+  DESCRIPTION:<br/>
     This command will join the client to the desired chatroom, if it's available
 
 -------------------------------------;
 
 > /user [username]
 
-User will issue the server the aforementioned command.
-  PARAMETERS:
-    username: the name of the client
-  RETURN:
-    Success
-  DESCRIPTION:
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    username: the name of the client<br/>
+  RETURN:<br/>
+    Success<br/>
+  DESCRIPTION:<br/>
     This command will authenticate him/herself to the server. The server responds with the salt of the client. The client enters a password that is hashed 100.000x with SHA256. The hash is sent over to the server and is validated there to be correct or not. If it's accepted, then the server responds with `1`, else `0`.
 
 ## Questions
