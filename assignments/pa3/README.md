@@ -14,6 +14,7 @@ To start the client, run the following:
 
 ## Implementation
 When a client has established a secure encrypted connection, a `Welcome` message is displayed. The secure connection is established with TCP and OpenSSL.<br/>
+
 After the connection, the client is asked for his/her username and password. The user gets three tries to enter the correct password, else s/he will need to enter the username again.<br/>
 
 All logs are logged to a file named `chatd.log` located in `./log`. The log contains a timestamp, the client IP and port, and a descriptive message. The timestamp is in ISO 8601 format, precise up to seconds.<br/>
@@ -32,6 +33,7 @@ A client can only be a member of one chatroom at a time. A subsequent join will 
 
 ## Protocol
 > /bye
+
 User will issue the server the aforementioned command.
   PARAMETERS:
     none
@@ -43,6 +45,7 @@ User will issue the server the aforementioned command.
 -------------------------------------;
 
 > /who
+
 User will issue the server the aforementioned command.
   PARAMETERS:
     none
@@ -54,6 +57,7 @@ User will issue the server the aforementioned command.
 -------------------------------------;
 
 > /list
+
 User will issue the server the aforementioned command.
   PARAMETERS:
     none
@@ -66,6 +70,7 @@ User will issue the server the aforementioned command.
 -------------------------------------;
 
 > /join [name]
+
 User will issue the server the aforementioned command.
   PARAMETERS:
     name: the name of chatroom
@@ -77,6 +82,7 @@ User will issue the server the aforementioned command.
 -------------------------------------;
 
 > /user [username]
+
 User will issue the server the aforementioned command.
   PARAMETERS:
     username: the name of the client
