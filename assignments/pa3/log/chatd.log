@@ -1,142 +1,89 @@
 =================================================
-Fri, 04 Nov 2016 16:29:08 GMT -> Starting to log:
+Mon, 07 Nov 2016 15:47:21 GMT -> Starting to log:
 =================================================
+Mon, 07 Nov 2016 15:47:23 GMT : 127.0.0.1:37546 connected
+Mon, 07 Nov 2016 15:47:26 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 15:47:29 GMT : 127.0.0.1:38058 connected
+Mon, 07 Nov 2016 15:47:31 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 15:47:33 GMT : 127.0.0.1:38570 connected
+Mon, 07 Nov 2016 15:47:37 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 15:48:04 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 15:48:07 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 15:48:09 GMT : 127.0.0.1:2000 disconnected
 =================================================
-Fri, 04 Nov 2016 16:29:15 GMT -> Starting to log:
+Mon, 07 Nov 2016 15:48:20 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:29:22 GMT : 127.0.0.1:37077 connected
-Fri, 04 Nov 2016 16:29:27 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:29:27 GMT : 127.0.0.1:2000 disconnected
-Fri, 04 Nov 2016 16:29:27 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 15:48:22 GMT : 127.0.0.1:39082 connected
+Mon, 07 Nov 2016 15:48:26 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 15:48:29 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:34:19 GMT -> Starting to log:
+Mon, 07 Nov 2016 15:50:30 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:34:25 GMT : 127.0.0.1:39125 connected
-Fri, 04 Nov 2016 16:34:34 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 15:50:32 GMT : 127.0.0.1:44714 connected
+Mon, 07 Nov 2016 15:50:35 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 15:50:49 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:36:04 GMT -> Starting to log:
+Mon, 07 Nov 2016 15:58:54 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:36:05 GMT : 127.0.0.1:41173 connected
-Fri, 04 Nov 2016 16:36:08 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 15:59:01 GMT : 127.0.0.1:64682 connected
 =================================================
-Fri, 04 Nov 2016 16:36:50 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:00:30 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:36:53 GMT : 127.0.0.1:62661 connected
-Fri, 04 Nov 2016 16:37:10 GMT : 127.0.0.1:2001 authenticated
-Fri, 04 Nov 2016 16:37:18 GMT : 127.0.0.1:2001 disconnected
-Fri, 04 Nov 2016 16:37:18 GMT : 127.0.0.1:2001 disconnected
+Mon, 07 Nov 2016 16:00:32 GMT : 127.0.0.1:171 connected
 =================================================
-Fri, 04 Nov 2016 16:37:41 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:02:14 GMT -> Starting to log:
 =================================================
+Mon, 07 Nov 2016 16:02:18 GMT : 127.0.0.1:2219 connected
 =================================================
-Fri, 04 Nov 2016 16:37:54 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:03:31 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:38:02 GMT : 127.0.0.1:42709 connected
-Fri, 04 Nov 2016 16:38:04 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:38:09 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:03:33 GMT : 127.0.0.1:4267 connected
 =================================================
-Fri, 04 Nov 2016 16:38:13 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:03:56 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:38:15 GMT : 127.0.0.1:43221 connected
-Fri, 04 Nov 2016 16:38:17 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:38:20 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:38:23 GMT : 127.0.0.1:2000 disconnected
-Fri, 04 Nov 2016 16:38:23 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:03:58 GMT : 127.0.0.1:4779 connected
+Mon, 07 Nov 2016 16:04:06 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:04:10 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:42:10 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:06:29 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:42:23 GMT : 127.0.0.1:45269 connected
-Fri, 04 Nov 2016 16:42:38 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:42:40 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:06:34 GMT : 127.0.0.1:6315 connected
+Mon, 07 Nov 2016 16:06:39 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:07:02 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:43:14 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:07:32 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:43:19 GMT : 127.0.0.1:46293 connected
-Fri, 04 Nov 2016 16:43:23 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:43:25 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:43:26 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:43:33 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:43:34 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:43:35 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:43:36 GMT : 127.0.0.1:2000 disconnected
-Fri, 04 Nov 2016 16:43:36 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:07:35 GMT : 127.0.0.1:8363 connected
+Mon, 07 Nov 2016 16:07:37 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:07:44 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:44:47 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:08:10 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:44:51 GMT : 127.0.0.1:47317 connected
-Fri, 04 Nov 2016 16:44:53 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:44:59 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:08:11 GMT : 127.0.0.1:8875 connected
+Mon, 07 Nov 2016 16:08:14 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:08:22 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Fri, 04 Nov 2016 16:45:00 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:12:49 GMT -> Starting to log:
 =================================================
-Fri, 04 Nov 2016 16:45:04 GMT : 127.0.0.1:47829 connected
-Fri, 04 Nov 2016 16:45:06 GMT : 127.0.0.1:2000 authentication error
-Fri, 04 Nov 2016 16:45:08 GMT : 127.0.0.1:2000 authenticated
-Fri, 04 Nov 2016 16:45:09 GMT : 127.0.0.1:2000 disconnected
-Fri, 04 Nov 2016 16:45:09 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:12:51 GMT : 127.0.0.1:27819 connected
+Mon, 07 Nov 2016 16:12:55 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 16:12:59 GMT : 127.0.0.1:28331 connected
+Mon, 07 Nov 2016 16:13:00 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 16:13:14 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 16:13:26 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:13:27 GMT : 127.0.0.1:2000 disconnected
 =================================================
-Sun, 06 Nov 2016 16:37:43 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:14:39 GMT -> Starting to log:
 =================================================
-Sun, 06 Nov 2016 16:37:48 GMT : 127.0.0.1:50919 connected
-Sun, 06 Nov 2016 16:38:16 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 16:38:51 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 16:38:56 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:14:42 GMT : 127.0.0.1:30379 connected
+Mon, 07 Nov 2016 16:14:47 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 16:14:49 GMT : 127.0.0.1:2000 disconnected
+Mon, 07 Nov 2016 16:14:50 GMT : 127.0.0.1:30891 connected
+Mon, 07 Nov 2016 16:14:52 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:14:55 GMT : 127.0.0.1:2000 authentication error
 =================================================
-Sun, 06 Nov 2016 16:40:56 GMT -> Starting to log:
+Mon, 07 Nov 2016 16:17:01 GMT -> Starting to log:
 =================================================
-Sun, 06 Nov 2016 16:41:03 GMT : 127.0.0.1:51943 connected
-Sun, 06 Nov 2016 16:41:08 GMT : 127.0.0.1:2000 authentication error
-Sun, 06 Nov 2016 16:41:10 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 16:42:06 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 16:44:03 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 16:44:09 GMT : 127.0.0.1:55015 connected
-Sun, 06 Nov 2016 16:44:12 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 16:45:38 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 16:55:17 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 16:55:19 GMT : 127.0.0.1:3817 connected
-Sun, 06 Nov 2016 16:55:23 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 16:57:29 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 16:57:34 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 16:58:59 GMT -> Starting to log:
-=================================================
-=================================================
-Sun, 06 Nov 2016 16:59:07 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 16:59:09 GMT : 127.0.0.1:20201 connected
-Sun, 06 Nov 2016 16:59:12 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 16:59:31 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 16:59:31 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 17:01:58 GMT -> Starting to log:
-=================================================
-=================================================
-Sun, 06 Nov 2016 17:02:11 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 17:02:14 GMT : 127.0.0.1:21737 connected
-Sun, 06 Nov 2016 17:02:16 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 17:02:47 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 17:02:47 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 17:03:39 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 17:03:45 GMT : 127.0.0.1:22761 connected
-Sun, 06 Nov 2016 17:03:49 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 17:04:07 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 17:04:07 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 17:05:52 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 17:05:56 GMT : 127.0.0.1:23785 connected
-Sun, 06 Nov 2016 17:05:58 GMT : 127.0.0.1:2000 authenticated
-Sun, 06 Nov 2016 17:06:13 GMT : 127.0.0.1:2000 disconnected
-Sun, 06 Nov 2016 17:06:13 GMT : 127.0.0.1:2000 disconnected
-=================================================
-Sun, 06 Nov 2016 17:08:15 GMT -> Starting to log:
-=================================================
-Sun, 06 Nov 2016 17:08:17 GMT : 127.0.0.1:25321 connected
-Sun, 06 Nov 2016 17:08:23 GMT : 127.0.0.1:2000 authenticated
+Mon, 07 Nov 2016 16:17:03 GMT : 127.0.0.1:32427 connected
+Mon, 07 Nov 2016 16:17:07 GMT : 127.0.0.1:2000 authentication error
+Mon, 07 Nov 2016 16:17:11 GMT : 127.0.0.1:2000 authentication error

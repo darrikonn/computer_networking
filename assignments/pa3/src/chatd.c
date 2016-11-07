@@ -16,7 +16,7 @@ int sockaddr_in_cmp(const void *addr1, const void *addr2) {
 
   /* If either of the pointers is NULL or the addresses
      belong to different families, we abort. */
-  g_assert((_addr1 == NULL) || (_addr2 == NULL) ||
+  g_assert((_addr1 != NULL) || (_addr2 != NULL) ||
       (_addr1->sin_family != _addr2->sin_family));
 
   if (_addr1->sin_addr.s_addr < _addr2->sin_addr.s_addr) {
@@ -159,7 +159,6 @@ void initializeArray(char* arr, int size) {
  */
 bool getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
   (void)tmp;
-  printf("name: %s\n", name);
   g_snprintf(rooms+strlen(rooms), RESPONSE_SIZE, "%s\n", name);
   return FALSE;
 }
@@ -167,7 +166,7 @@ bool getAllNamesOfChatRooms(char* name, gpointer tmp, char* rooms) {
 /*
  * Join a room
  */
-int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* res) {
+int joinRoom(struct sockaddr_in* client, struct user_s* user, char* room, char* res) {
   // check if it is the users room
   if (g_strcmp0(user->chatroom, room)) {
     bool created = FALSE;
@@ -206,7 +205,7 @@ int joinRoom(struct user_s* user, struct sockaddr_in* client, char* room, char* 
 }
 
 /*
- * Generate the salt
+ * Generate the random salt
  */
 void createSalt(char* salt) {
   for (size_t i = 0; i < SALT_SIZE; i++) {
@@ -230,7 +229,7 @@ bool getUserByName(struct sockaddr_in* client, struct user_s* user, struct query
 /*
  * Handle the client requests
  */
-void handleRequests(struct user_s* user, struct sockaddr_in* client, char* message) {
+void handleRequests(struct sockaddr_in* client, struct user_s* user, char* message) {
   char res[RESPONSE_SIZE];
   initializeArray(res, RESPONSE_SIZE);
   g_timer_start(user->timer); // reset the timer of the user
@@ -253,14 +252,16 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
   } else if (g_str_has_prefix(message, "/join")) {
     gchar** tmp = g_strsplit(message, " ", 2);
 
-    int n = joinRoom(user, client, tmp[1], res);
+    int n = joinRoom(client, user, tmp[1], res);
     SSL_write(user->ssl, res, n);
     g_strfreev(tmp);
   } else if (g_str_has_prefix(message, "/user")) {
     gchar** tmp = g_strsplit(message, " ", 2);
+
     // get salt and password from keyfile
     char* salt_db = g_key_file_get_string(keyfile, "salts", tmp[1], NULL);
     char* passwd_db = g_key_file_get_string(keyfile, "passwords", tmp[1], NULL);
+    // if no salt in database, add it
     if (salt_db == NULL) {
       char salt[SALT_SIZE];
       initializeArray(salt, SALT_SIZE);
@@ -269,26 +270,33 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
       g_key_file_set_string(keyfile, "salts", tmp[1], salt);
       salt_db = g_key_file_get_string(keyfile, "salts", tmp[1], NULL);
     }
+    // send the salt to the client
     SSL_write(user->ssl, salt_db, strlen(salt_db));
 
     char passwd[PASSWORD_SIZE];
     initializeArray(passwd, PASSWORD_SIZE);
 
+    // receive the hashed password
     int n = SSL_read(user->ssl, passwd, PASSWORD_SIZE-1);
     passwd[n] = '\0';
 
+    // if the database doesn't contain a password set the password
     if (passwd_db == NULL) {
       g_key_file_set_string(keyfile, "passwords", tmp[1], passwd);
       SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
-      user->username = tmp[1];
+      user->username = strdup(tmp[1]);
       user->chatroom = LOBBY;
+      struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, LOBBY);
+      chatroom->list = g_list_append(chatroom->list, client);
 
       createRequestLog(user->ip, user->port, "authenticated");
-    } else {
+    } else { // else compare it
       if (!g_strcmp0(passwd, passwd_db)) {
         SSL_write(user->ssl, AUTHENTICATED, sizeof(AUTHENTICATED));
         user->username = strdup(tmp[1]);
         user->chatroom = LOBBY;
+        struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, LOBBY);
+        chatroom->list = g_list_append(chatroom->list, client);
 
         createRequestLog(user->ip, user->port, "authenticated");
       } else {
@@ -323,6 +331,24 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
     g_free(query->client);
     g_free(query);
     g_strfreev(tmp);
+  } else { // send the message to the lobby
+    if (!user->sendingCnt) { // hacking for the salt
+      user->sendingCnt++;
+      return;
+    }
+    struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
+    for (size_t i = 0; i < g_list_length(chatroom->list); i++) {
+      // send to receiving users
+      struct sockaddr_in* rec_client = g_list_nth_data(chatroom->list, i);
+      if (sockaddr_in_cmp(client, rec_client)) {
+        struct user_s* receiver = g_tree_lookup(user_t, rec_client);
+
+        strcpy(res, user->username);
+        strcat(res, ": ");
+        strcat(res, message);
+        SSL_write(receiver->ssl, res, strlen(res));
+      }
+    }
   }
 }
 
@@ -330,6 +356,7 @@ void handleRequests(struct user_s* user, struct sockaddr_in* client, char* messa
  * Remove connections
  */
 void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
+  printf("Disconnecting user %s\n", user->username);
   struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
 
   createRequestLog(user->ip, user->port, "disconnected");
@@ -338,14 +365,14 @@ void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* f
   shutdown(user->fd, SHUT_RDWR);
   close(user->fd);
   FD_CLR(user->fd, fdset);
-
-
+  
   chatroom->list = g_list_remove(chatroom->list, client);
 
-  g_tree_remove(user_t, &client);
+  g_tree_remove(user_t, client);
 
   g_timer_destroy(user->timer);
   g_free(user->username);
+  g_free(user->ip);
   g_free(user);
   g_free(client);
 }
@@ -355,6 +382,7 @@ void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* f
  */
 bool checkConnections(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
   if (g_timer_elapsed(user->timer, NULL) > MAX_INACTIVITY) {
+    createRequestLog(user->ip, user->port, "timed out");
     removeConnection(client, user, fdset);
   }
   return FALSE;
@@ -366,11 +394,12 @@ bool checkConnections(struct sockaddr_in* client, struct user_s* user, fd_set* f
 bool traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, struct fdsets_s* fdsets) {
   if (FD_ISSET(user->fd, fdsets->tempset)) {
     char message[MESSAGE_SIZE];
+    initializeArray(message, MESSAGE_SIZE);
     int n = SSL_read(user->ssl, message, MESSAGE_SIZE-1);
     if (n > 0) {
       message[n] = '\0';
-      printf("%s\n", message);
-      handleRequests(user, client, message);
+      printf("msg: %s\n", message);
+      handleRequests(client, user, message);
     } else {
       // client disconnected
       removeConnection(client, user, fdsets->fdset);
@@ -469,13 +498,12 @@ int main(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
 
-        printf("Connection established\n");
-
         // insert into the set
         FD_SET(connfd, &fdset);
-        // FD_CLR(sockfd, &tempset);
+        //FD_CLR(sockfd, &tempset);
         maxfd = maxfd < connfd ? connfd : maxfd;
 
+        // create new ssl
         SSL* ssl = SSL_new(ssl_ctx);
         SSL_set_fd(ssl, connfd);
         if (SSL_accept(ssl) < 0) {
@@ -486,18 +514,20 @@ int main(int argc, char **argv) {
         char addr[INET_ADDRSTRLEN];
         getClientAddr(client, addr);
         int clientPort = client->sin_port;
+        printf("Connection established, with fd: %d\n", connfd);
+        printf("Client information: %s:%d\n\n", addr, clientPort);
 
         // insert user into the tree
         struct user_s* user = g_new0(struct user_s, 1);
         user->ssl = ssl;
-        user->ip = addr;
+        user->ip = strdup(addr);
+        user->username = NULL;
+        user->chatroom = NULL;
+        user->sendingCnt = 0;
         user->port = port;
         user->fd = connfd;
         user->timer = g_timer_new();
         g_tree_insert(user_t, client, user);
-
-        // insert the user into the lobby
-        lobby->list = g_list_append(lobby->list, &client);
 
         // send the message
         if (SSL_write(ssl, WELCOME, sizeof(WELCOME)) == -1) {
@@ -508,6 +538,7 @@ int main(int argc, char **argv) {
         createRequestLog(addr, clientPort, "connected");
       }
 
+      // traverse the user tree
       struct fdsets_s* fdsets = g_new0(struct fdsets_s, 1);
       fdsets->fdset = &fdset;
       fdsets->tempset = &tempset;
@@ -515,9 +546,11 @@ int main(int argc, char **argv) {
       g_free(fdsets);
     }
 
+    // check for time outs
     g_tree_foreach(user_t, (GTraverseFunc)checkConnections, &fdset);
   }
 
+  // clean up
   g_key_file_free(keyfile);
   close(sockfd);
   SSL_CTX_free(ssl_ctx);

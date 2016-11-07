@@ -42,7 +42,6 @@ User will issue the server the aforementioned command.<br/>
   DESCRIPTION:<br/>
     This command will clean up and close the connection on the server.
 
--------------------------------------;
 
 > /who
 
@@ -54,7 +53,6 @@ User will issue the server the aforementioned command.<br/>
   DESCRIPTION:<br/>
     This command will list the names of all users that are available/authenticated on the system.
 
--------------------------------------;
 
 > /list
 
@@ -67,7 +65,6 @@ User will issue the server the aforementioned command.<br/>
     This command will list the names of all available public chat rooms.
 
 
--------------------------------------;
 
 > /join [name]
 
@@ -81,7 +78,6 @@ User will issue the server the aforementioned command.<br/>
   DESCRIPTION:<br/>
     This command will join the client to the desired chatroom, if it's available
 
--------------------------------------;
 
 > /user [username]
 
@@ -91,7 +87,19 @@ User will issue the server the aforementioned command.<br/>
   RETURN:<br/>
     Welcome [username]<br/>
   DESCRIPTION:<br/>
-    This command will authenticate him/herself to the server. The server responds with the salt of the client. The client enters a password that is hashed 100.000x with SHA256. The hash is sent over to the server and is validated there to be correct or not. If it's accepted, then the server responds with `1`, else `0`.
+    This command will authenticate a user to the server. The server responds with the salt of the client. The client enters a password that is hashed 100.000x with SHA256. The hash is sent over to the server and is validated there to be correct or not. If it's accepted, then the server responds with `1`, else `0`.
+
+
+> /game [username]
+
+User will issue the server the aforementioned command.<br/>
+  PARAMETERS:<br/>
+    username: the name of the opponent<br/>
+  RETURN:<br/>
+    none<br/>
+  DESCRIPTION:<br/>
+    Two clients may play a game of fortune by issuing the command /game username. The challengedd user may accept or decline to play. Once a game started, /roll shall generate the sum of two pseudo-random numbers from 1 to 6. The winner is the one with the highest result.
+
 
 ## Questions
 #### 6.5
@@ -99,3 +107,9 @@ The hashed passwords and salts are stored in the keyfile, called `keyfile.ini` "
 
 #### 7.2
 Yes, private messages should be logged. What could be logged is who sent it, when and so on. Private messages should be encrypted using RSA for example. The consequences are that the messages can be decrypted by a possible attacker that can circumvent this.
+
+#### 8.2
+By idling out unused connections we prevent resources from being wasted. Each client has its own timer, and after each action the clients performs, that timer is restarted. A loop regularly checks if the time since his/her last action exceeds the maximum time out (60 seconds); then the connection is closed.
+
+#### 9.2
+An attacker can somehow obtain the seed that is used to generate random numbers and possibly guess the next move of his opponent. You can defend this by making the seed absolutely random.

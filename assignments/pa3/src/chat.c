@@ -106,6 +106,7 @@ void authenticate(char* new_user) {
   char buffer[256]; // need to reuse the buffer
   /* Process and send this information to the server. */
   for (int i = 0; i < MAX_TRIES; i++) {
+    //initializeArray(buffer, 256);
     char salt[SALT_SIZE], passwd[PASSWORD_SIZE];
     initializeArray(salt, SALT_SIZE);
     initializeArray(passwd, PASSWORD_SIZE);
@@ -125,7 +126,7 @@ void authenticate(char* new_user) {
     SSL_write(server_ssl, hash64, strlen(hash64));
     g_free(hash64);
 
-    n = SSL_read(server_ssl, buffer, RESPONSE_SIZE);
+    n = SSL_read(server_ssl, buffer, sizeof(buffer));
     buffer[n] = '\0';
 
     if (!g_strcmp0(buffer, "1")) {
@@ -154,7 +155,7 @@ void authenticate(char* new_user) {
 void printLogIn() {
   write(STDOUT_FILENO, "\nPlease, log in\nusername: ", 26);
   fsync(STDOUT_FILENO);
-  rl_redisplay();
+  //rl_redisplay();
 }
 
 /* When a line is entered using the readline library, this function
@@ -256,9 +257,6 @@ void readline_callback(char* line) {
       rl_redisplay();
       return;
     }
-    /*char *receiver = strndup(&(line[i]), j - i - 1);
-    char *message = strndup(&(line[j]), j - i - 1);
-    */
 
     /* Send private message to receiver. */
     SSL_write(server_ssl, line, strlen(line));
@@ -266,6 +264,8 @@ void readline_callback(char* line) {
     char res[RESPONSE_SIZE];
     int n = SSL_read(server_ssl, res, RESPONSE_SIZE);
     write(STDOUT_FILENO, res, n);
+    fsync(STDOUT_FILENO);
+    rl_redisplay();
 
     return;
   }
@@ -299,9 +299,8 @@ void readline_callback(char* line) {
     return;
   }
   /* Sent the buffer to the server. */
-  snprintf(buffer, 255, "Message: %s\n", line);
-  write(STDOUT_FILENO, buffer, strlen(buffer));
-  fsync(STDOUT_FILENO);
+  snprintf(buffer, 255, "%s", line);
+  SSL_write(server_ssl, buffer, strlen(buffer));
 }
 
 int main(int argc, char **argv) {
@@ -358,11 +357,10 @@ int main(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
+  int r; // retval
+
   // create ssl
   server_ssl = SSL_new(ssl_ctx);
-
-  // use the socket for the SSL connections
-  //SSL_set_fd(server_fd, server_fd);
 
   // use BIOs them instead of the socket.
   BIO* sbio = BIO_new_socket(server_fd, BIO_NOCLOSE);
@@ -379,7 +377,6 @@ int main(int argc, char **argv) {
   }
 
   // read characters from the keyboard while waiting for input.
-  //prompt = strdup("> ");
   rl_callback_handler_install(prompt, (rl_vcpfunc_t*) &readline_callback);
   for (;;) {
     fd_set rfds;
@@ -392,15 +389,17 @@ int main(int argc, char **argv) {
     FD_SET(STDIN_FILENO, &rfds);
     FD_SET(exitfd[0], &rfds);
     FD_SET(server_fd, &rfds);
-    timeout.tv_sec = 3;
+    timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
     int maxfd = server_fd > STDIN_FILENO ? server_fd : STDIN_FILENO;
     if (exitfd[0] > maxfd) {
       maxfd = exitfd[0];
     }
-    int r = select(maxfd + 1, &rfds, NULL, NULL, &timeout);
-    if (r < 0) {
+    if ((r = select(maxfd+1, &rfds, NULL, NULL, &timeout)) == -1) {
+      perror("select()");
+      exit(EXIT_FAILURE);
+    } else if (r < 0) {
       if (errno == EINTR) {
         /* This should either retry the call or
            exit the loop, depending on whether we
@@ -412,13 +411,6 @@ int main(int argc, char **argv) {
       break;
     }
     if (r == 0) {
-      /*
-      write(STDOUT_FILENO, "No message?\n", 12);
-      fsync(STDOUT_FILENO);
-      */
-      /* Whenever you print out a message, call this
-         to reprint the current input line. */
-      /*rl_redisplay();*/
       continue;
     }
     if (FD_ISSET(exitfd[0], &rfds)) {
@@ -447,11 +439,17 @@ int main(int argc, char **argv) {
     if (FD_ISSET(server_fd, &rfds)) {
       /* Handle messages from the server here! */
       char message[MESSAGE_SIZE];
-      int n = SSL_read(server_ssl, message, sizeof(message)-1);
+      int n = SSL_read(server_ssl, message, MESSAGE_SIZE-1);
       if (n > 0) {
         message[n] = '\0';
-        printf("\"%s\"\n", message);
-        printLogIn();
+        printf("%s\n", message);
+        if (user == NULL) {
+          printLogIn();
+        } else {
+          free(prompt);
+          prompt = strdup("> "); // What should the new prompt look like?
+          rl_set_prompt(prompt);
+        }
       } else {
         write(STDOUT_FILENO, "\nInactive for too long!\n", 23);
         fsync(STDOUT_FILENO);

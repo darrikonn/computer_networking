@@ -62,6 +62,7 @@ struct user_s {
   char* chatroom;
   char* ip;
   int port;
+  int sendingCnt;
 };
 
 struct chatroom_s {
@@ -92,10 +93,10 @@ SSL_CTX* initializeSSL();
 bool getAllUserNamesOfTree(struct sockaddr_in*, struct user_s*, char*);
 void initializeArray(char*, int);
 bool getAllNamesOfChatRooms(char*, gpointer, char*);
-int joinRoom(struct user_s*, struct sockaddr_in*, char*, char*);
+int joinRoom(struct sockaddr_in*, struct user_s*, char*, char*);
 void createSalt(char*);
 bool getUserByName(struct sockaddr_in*, struct user_s*, struct query_s*);
-void handleRequests(struct user_s*, struct sockaddr_in*, char*);
+void handleRequests(struct sockaddr_in*, struct user_s*, char*);
 void removeConnection(struct sockaddr_in*, struct user_s*, fd_set*);
 bool checkConnections(struct sockaddr_in*, struct user_s*, fd_set*);
 bool traverseFileDescriptors(struct sockaddr_in*, struct user_s*, struct fdsets_s*);
