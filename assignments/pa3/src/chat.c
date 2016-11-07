@@ -106,26 +106,31 @@ void authenticate(char* new_user) {
   char buffer[256]; // need to reuse the buffer
   /* Process and send this information to the server. */
   for (int i = 0; i < MAX_TRIES; i++) {
-    //initializeArray(buffer, 256);
+    initializeArray(buffer, sizeof(buffer));
     char salt[SALT_SIZE], passwd[PASSWORD_SIZE];
-    initializeArray(salt, SALT_SIZE);
     initializeArray(passwd, PASSWORD_SIZE);
 
     strcpy(buffer, "/user ");
     strncat(buffer, new_user, strlen(new_user));
+    // send request to log in
     SSL_write(server_ssl, buffer, strlen(buffer));
 
+    // get the salt
     int n = SSL_read(server_ssl, salt, SALT_SIZE-1);
     salt[n] = '\0';
 
+    // get password from client
     getpasswd("Password: ", passwd, (int)PASSWORD_SIZE);
    
+    // hash the password with the salt and send to server
     unsigned char hash[SHA256_DIGEST_LENGTH];
+    memset(hash, 0, SHA256_DIGEST_LENGTH);
     hashPassword(hash, salt, passwd);
     char* hash64 = g_base64_encode(hash, strlen((char*)hash));
     SSL_write(server_ssl, hash64, strlen(hash64));
     g_free(hash64);
 
+    // get if successful
     n = SSL_read(server_ssl, buffer, sizeof(buffer));
     buffer[n] = '\0';
 
@@ -155,7 +160,6 @@ void authenticate(char* new_user) {
 void printLogIn() {
   write(STDOUT_FILENO, "\nPlease, log in\nusername: ", 26);
   fsync(STDOUT_FILENO);
-  //rl_redisplay();
 }
 
 /* When a line is entered using the readline library, this function
@@ -316,7 +320,7 @@ int main(int argc, char **argv) {
   // string to long(string, endptr, base)
   char* p;
   long port = strtol(argv[2], &p, 10);
-  if (errno != 0 || *p != '\0' || port > INT_MAX || port < INT_MIN) {
+  if (*p != '\0' || port > INT_MAX || port < INT_MIN) {
     fprintf(stderr, "Port number is invalid!\n");
     exit(EXIT_FAILURE);
   }

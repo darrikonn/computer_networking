@@ -277,7 +277,7 @@ void handleRequests(struct sockaddr_in* client, struct user_s* user, char* messa
     initializeArray(passwd, PASSWORD_SIZE);
 
     // receive the hashed password
-    int n = SSL_read(user->ssl, passwd, PASSWORD_SIZE-1);
+    int n = SSL_read(user->ssl, passwd, PASSWORD_SIZE);
     passwd[n] = '\0';
 
     // if the database doesn't contain a password set the password
@@ -304,6 +304,7 @@ void handleRequests(struct sockaddr_in* client, struct user_s* user, char* messa
         createRequestLog(user->ip, user->port, "authentication error");
       }
     }
+    SSL_read(user->ssl, res, RESPONSE_SIZE); // dummy to read the salt
 
     g_key_file_save_to_file(keyfile, "keyfile.ini", NULL);
       
@@ -332,10 +333,6 @@ void handleRequests(struct sockaddr_in* client, struct user_s* user, char* messa
     g_free(query);
     g_strfreev(tmp);
   } else { // send the message to the lobby
-    if (!user->sendingCnt) { // hacking for the salt
-      user->sendingCnt++;
-      return;
-    }
     struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
     for (size_t i = 0; i < g_list_length(chatroom->list); i++) {
       // send to receiving users
@@ -356,7 +353,6 @@ void handleRequests(struct sockaddr_in* client, struct user_s* user, char* messa
  * Remove connections
  */
 void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* fdset) {
-  printf("Disconnecting user %s\n", user->username);
   struct chatroom_s* chatroom = g_tree_lookup(chatroom_t, user->chatroom);
 
   createRequestLog(user->ip, user->port, "disconnected");
@@ -366,12 +362,18 @@ void removeConnection(struct sockaddr_in* client, struct user_s* user, fd_set* f
   close(user->fd);
   FD_CLR(user->fd, fdset);
   
-  chatroom->list = g_list_remove(chatroom->list, client);
+  if (chatroom != NULL) {
+    chatroom->list = g_list_remove(chatroom->list, client);
+  }
 
   g_tree_remove(user_t, client);
-
   g_timer_destroy(user->timer);
-  g_free(user->username);
+
+  if (user->username != NULL) {
+    printf("Disconnecting user %s\n", user->username);
+    g_free(user->username);
+  }
+
   g_free(user->ip);
   g_free(user);
   g_free(client);
@@ -398,7 +400,6 @@ bool traverseFileDescriptors(struct sockaddr_in* client, struct user_s* user, st
     int n = SSL_read(user->ssl, message, MESSAGE_SIZE-1);
     if (n > 0) {
       message[n] = '\0';
-      printf("msg: %s\n", message);
       handleRequests(client, user, message);
     } else {
       // client disconnected
@@ -419,7 +420,7 @@ int main(int argc, char **argv) {
   // string to long(string, endptr, base)
   char* p;
   long port = strtol(argv[1], &p, 10);
-  if (errno != 0 || *p != '\0' || port > INT_MAX || port < INT_MIN) {
+  if (*p != '\0' || port > INT_MAX || port < INT_MIN) {
     fprintf(stderr, "Port number is invalid!\n");
     exit(EXIT_FAILURE);
   }
@@ -523,7 +524,7 @@ int main(int argc, char **argv) {
         user->ip = strdup(addr);
         user->username = NULL;
         user->chatroom = NULL;
-        user->sendingCnt = 0;
+        user->loginCnt = 0;
         user->port = port;
         user->fd = connfd;
         user->timer = g_timer_new();

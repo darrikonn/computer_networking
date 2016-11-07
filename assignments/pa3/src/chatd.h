@@ -62,7 +62,7 @@ struct user_s {
   char* chatroom;
   char* ip;
   int port;
-  int sendingCnt;
+  int loginCnt;
 };
 
 struct chatroom_s {
